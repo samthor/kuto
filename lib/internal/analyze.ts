@@ -62,7 +62,6 @@ function processPattern(p: acorn.Pattern) {
 
   while (pending.length) {
     const p = pending.shift()!;
-    console.info('processing', p);
     switch (p.type) {
       case 'Identifier':
         names.push(p.name);
@@ -126,6 +125,71 @@ function processPattern(p: acorn.Pattern) {
   };
 }
 
+function reductifyClassParts(c: acorn.Class): acorn.Expression {
+  const e: acorn.Expression[] = [];
+  c.superClass && e.push(c.superClass);
+
+  for (const part of c.body.body) {
+    switch (part.type) {
+      case 'MethodDefinition':
+      case 'PropertyDefinition':
+        if (part.computed) {
+          e.push(part.key as acorn.Expression);
+        }
+        if (part.value) {
+          if (part.static || part.type === 'MethodDefinition') {
+            // evaluated here
+            e.push(part.value);
+          } else {
+            // not run immediately but can ref
+            const expr: acorn.ReturnStatement = {
+              type: 'ReturnStatement',
+              start: -1,
+              end: -1,
+              argument: part.value,
+            };
+            e.push(createIife([expr]));
+          }
+        }
+        break;
+
+      case 'StaticBlock':
+        // push self-evaluated function expr
+        e.push(createIife(part.body));
+        break;
+    }
+  }
+
+  return e.length === 1 ? e[0] : createSequenceExpression(...e);
+}
+
+function reductifyFunction(f: acorn.Function): acorn.BlockStatement {
+  const body: acorn.Statement[] = [];
+
+  if (f.params.length) {
+    const decl: acorn.VariableDeclaration = {
+      type: 'VariableDeclaration',
+      start: -1,
+      end: -1,
+      kind: 'var',
+      declarations: f.params.map((id): acorn.VariableDeclarator => {
+        return {
+          type: 'VariableDeclarator',
+          start: id.start,
+          end: id.end,
+          id,
+        };
+      }),
+    };
+    body.push(decl);
+  } else if (f.body.type === 'BlockStatement') {
+    return f.body;
+  }
+
+  body.push(f.body.type === 'BlockStatement' ? f.body : createExpressionStatement(f.body));
+  return createBlock(...body);
+}
+
 function reductifyStatement(
   b: acorn.Statement,
 ): acorn.BlockStatement | acorn.Expression | acorn.VariableDeclaration | void {
@@ -181,50 +245,19 @@ function reductifyStatement(
     }
 
     case 'ClassDeclaration': {
-      const e: acorn.Expression[] = [];
-      b.superClass && e.push(b.superClass);
-
-      for (const part of b.body.body) {
-        switch (part.type) {
-          case 'MethodDefinition':
-          case 'PropertyDefinition':
-            if (part.computed) {
-              e.push(part.key as acorn.Expression);
-            }
-            if (part.value) {
-              if (part.static || part.type === 'MethodDefinition') {
-                // evaluated here
-                e.push(part.value);
-              } else {
-                // not run immediately but can ref
-                const expr: acorn.ReturnStatement = {
-                  type: 'ReturnStatement',
-                  start: -1,
-                  end: -1,
-                  argument: part.value,
-                };
-                e.push(createIife([expr]));
-              }
-            }
-            break;
-
-          case 'StaticBlock':
-            // push self-evaluated function expr
-            e.push(createIife(part.body));
-            break;
-        }
-      }
-
+      // pretend to be "const Foo = class Foo { ... }"
       const decl: acorn.VariableDeclarator = {
         type: 'VariableDeclarator',
         start: -1,
         end: -1,
         id: b.id,
         init: {
-          type: 'SequenceExpression',
+          type: 'ClassExpression',
           start: -1,
           end: -1,
-          expressions: e,
+          id: b.id,
+          superClass: b.superClass,
+          body: b.body,
         },
       };
       return {
@@ -337,6 +370,143 @@ export type AnalyzeBlock = {
 export function analyzeBlock(b: acorn.BlockStatement): AnalyzeBlock {
   const out: AnalyzeBlock = { vars: new Map() };
 
+  const markIdentifier = (name: string, written: boolean = false) => {
+    const prev = out.vars.get(name);
+    if (prev) {
+      prev.written ||= written;
+    } else {
+      out.vars.set(name, { nestedWrite: false, written });
+    }
+  };
+
+  const processExpression = (
+    e: acorn.Expression | acorn.Super | acorn.PrivateIdentifier | acorn.SpreadElement,
+  ): void => {
+    switch (e.type) {
+      case 'PrivateIdentifier':
+      case 'Super':
+      case 'Literal':
+      case 'ThisExpression':
+      case 'MetaProperty':
+        break;
+
+      case 'ChainExpression':
+      case 'ParenthesizedExpression':
+        processExpression(e.expression);
+        break;
+
+      case 'SpreadElement':
+      case 'YieldExpression':
+      case 'AwaitExpression':
+      case 'UnaryExpression':
+        e.argument && processExpression(e.argument);
+        break;
+
+      case 'Identifier':
+        markIdentifier(e.name);
+        break;
+
+      case 'AssignmentExpression': {
+        const p = processPattern(e.left);
+        p.names.forEach((name) => markIdentifier(name, true));
+        processExpression(e.right);
+        break;
+      }
+
+      case 'UpdateExpression': {
+        if (e.argument.type === 'Identifier') {
+          // nb. acorn unwraps "((foo))++" for us, so this is probably safe
+          markIdentifier(e.argument.name, true);
+        } else {
+          processExpression(e.argument);
+        }
+        break;
+      }
+
+      case 'NewExpression':
+      case 'CallExpression':
+        // TODO: is this an iife, evaluate immediately and treat special
+        processExpression(e.callee);
+        e.arguments.forEach((arg) => processExpression(arg));
+        break;
+
+      case 'TemplateLiteral':
+      case 'SequenceExpression':
+        e.expressions.forEach((arg) => processExpression(arg));
+        break;
+
+      case 'ArrayExpression':
+        e.elements.forEach((el) => el && processExpression(el));
+        break;
+
+      case 'ConditionalExpression':
+        processExpression(e.test);
+        processExpression(e.consequent);
+        processExpression(e.alternate);
+        break;
+
+      case 'BinaryExpression':
+      case 'LogicalExpression':
+        processExpression(e.left);
+        processExpression(e.right);
+        break;
+
+      case 'ClassExpression':
+        processExpression(reductifyClassParts(e));
+        break;
+
+      case 'FunctionExpression':
+      case 'ArrowFunctionExpression': {
+        const block = reductifyFunction(e);
+        const inner = analyzeBlock(block);
+
+        for (const [key, info] of inner.vars) {
+          if (info.kind) {
+            continue;
+          }
+
+          const prev = out.vars.get(key);
+          const nestedWrite = info.written || info.nestedWrite;
+          if (prev) {
+            prev.nestedWrite ||= nestedWrite;
+          } else {
+            out.vars.set(key, { nestedWrite, written: false });
+          }
+        }
+        break;
+      }
+
+      case 'TaggedTemplateExpression':
+        processExpression(e.tag);
+        processExpression(e.quasi);
+        break;
+
+      case 'MemberExpression':
+        processExpression(e.object);
+        e.computed && processExpression(e.property);
+        break;
+
+      case 'ObjectExpression': {
+        for (const prop of e.properties) {
+          if (prop.type === 'SpreadElement') {
+            processExpression(prop.argument);
+          } else {
+            prop.computed && processExpression(prop.key);
+            processExpression(prop.value);
+          }
+        }
+        break;
+      }
+
+      case 'ImportExpression':
+        processExpression(e.source);
+        break;
+
+      default:
+        throw new Error(`should not get here: ${(e as any).type}`);
+    }
+  };
+
   for (const raw of b.body) {
     let simple = reductifyStatement(raw);
     if (!simple) {
@@ -347,7 +517,7 @@ export function analyzeBlock(b: acorn.BlockStatement): AnalyzeBlock {
       for (const [key, info] of inner.vars) {
         const prev = out.vars.get(key);
         if (prev === undefined) {
-          if (info.kind === 'var') {
+          if (info.kind === 'var' || !info.kind) {
             out.vars.set(key, info);
           }
           continue;
@@ -408,7 +578,7 @@ export function analyzeBlock(b: acorn.BlockStatement): AnalyzeBlock {
     }
 
     // we're an expr
-    simple;
+    processExpression(simple);
   }
 
   return out;

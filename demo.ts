@@ -6,6 +6,7 @@ const raw = fs.readFileSync(process.argv[2], 'utf-8');
 
 const p = acorn.parse(raw, {
   ecmaVersion: 'latest',
+  sourceType: 'module',
 });
 
 // TODO: strip export/import properly

@@ -1,7 +1,20 @@
+export {};
+
 // var naked;
 
-class Foo {
-  static {
-    var x = 123;
-  }
+function foo(x = 123) {
+  zing++;
 }
+
+var x = {
+  y: function () {
+    void function () {
+      //      foo = function (x = 345) {};
+      foo();
+    };
+  },
+};
+
+import('foo');
+
+import.meta['whatever'];
