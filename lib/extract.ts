@@ -56,18 +56,12 @@ export function extractStatic(args: ExtractStaticArgs) {
 
   // find all (simple) functions and see if we can yeet them
   const functions = agg.rest.filter(
-    (s) =>
-      // fn only for now
-      s.type === 'FunctionDeclaration' &&
-      // too hard
-      analysis.vars.get(s.id.name)?.simple &&
-      // can't rewrite 'default'
-      s.id.name !== 'default',
+    (s) => s.type === 'FunctionDeclaration',
   ) as acorn.FunctionDeclaration[];
 
   // TODO: this is needed for React stuff, uses lots of default (but maybe not in _bundle_?)
-  agg.rest.forEach((s) => {
-    if (s.type === 'FunctionDeclaration' && s.id.name === 'default') {
+  functions.forEach((s) => {
+    if (s.id.name === 'default') {
       // creates wacky code (decl without name), unsupported right now
       throw new Error(`TODO: can't handle default fn yet`);
     }
@@ -78,7 +72,6 @@ export function extractStatic(args: ExtractStaticArgs) {
     { locals: Set<string>; globals: Set<string>; static: { mod: ModDef } }
   >();
   const removeDecl = new Set<acorn.Statement>();
-  // const moddefStatic = new ModDef();
 
   const staticToWrite = new Map<
     string,
@@ -89,6 +82,10 @@ export function extractStatic(args: ExtractStaticArgs) {
   >();
 
   outer: for (const fn of functions) {
+    if (!analysis.vars.get(fn.id.name)?.simple) {
+      continue;
+    }
+
     const inner = analyzeFunction(fn);
     const globals = new Set<string>();
     const locals = new Set<string>();

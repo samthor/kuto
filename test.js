@@ -16,3 +16,15 @@ foo();
 bar();
 bar2();
 console.info('bar', bar());
+
+function whatever() {
+  if (1) {
+    if (somethingElse()) {
+      throw 123;
+    }
+  }
+}
+
+function somethingElse() {
+  return 123;
+}

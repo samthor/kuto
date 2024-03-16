@@ -54,10 +54,6 @@ export class ModDef {
     return o ? { ...o } : undefined;
   }
 
-  exports() {
-    return this._exports;
-  }
-
   addSource(importSource: string): SourceInfo {
     return withDefault(this.bySource, importSource, () => ({
       imports: new Map(),
@@ -132,25 +128,6 @@ export class ModDef {
 
     for (const [path, info] of this.bySource) {
       const pj = JSON.stringify(relativize(path));
-
-      // if (path === '') {
-      //   // special-case
-      //   if (info.imports.size || info.reexportAll) {
-      //     console.debug(info);
-      //     throw new Error(`bad for empty path`);
-      //   }
-      //   if (info.reexport.size) {
-      //     const parts: string[] = [];
-      //     for (const [remote, exported] of info.reexport) {
-      //       for (const e of exported) {
-      //         parts.push(safeImportAs(remote, e));
-      //       }
-      //     }
-      //     lines.push(`export { ${parts.join(', ')} }`);
-      //   }
-      //   continue;
-      // }
-
       let any = false;
 
       for (const localName of info.imports.get('') ?? []) {

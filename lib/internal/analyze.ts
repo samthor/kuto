@@ -379,10 +379,10 @@ export function analyzeBlock(b: acorn.BlockStatement): AnalyzeBlock {
   const markIdentifier = (name: string, written: boolean = false) => {
     const prev = out.vars.get(name);
     if (prev) {
-      prev.written ||= written;
-      if (written) {
+      if (prev.written && written) {
         prev.simple = false;
       }
+      prev.written ||= written;
       return prev;
     }
     const info: VarInfo = { written, nestedWrite: false, kind: undefined, simple: true };
@@ -600,9 +600,12 @@ export function analyzeBlock(b: acorn.BlockStatement): AnalyzeBlock {
                 `got kind mismatch: can only redeclare 'var', was '${prev.kind}' got '${simple.kind}'`,
               );
             }
+            if (prev.kind) {
+              // non-simple if this decl shadows another
+              prev.simple = false;
+            }
             prev.kind ||= simple.kind;
             prev.written ||= written;
-            prev.simple = false;
             continue;
           }
           out.vars.set(name, { written, nestedWrite: false, kind: simple.kind, simple: true });
