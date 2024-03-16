@@ -10,4 +10,9 @@ const sourceName = './' + parts.base;
 const staticName = './' + parts.name + '.static.js';
 
 const out = extractStatic(raw, { sourceName, staticName });
-console.info(out);
+
+fs.mkdirSync('dist', { recursive: true });
+fs.writeFileSync(path.join('dist', sourceName), out.source.main);
+fs.writeFileSync(path.join('dist', staticName), out.source.static);
+
+console.info('Ok');

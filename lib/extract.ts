@@ -28,13 +28,26 @@ export function extractStatic(raw: string, arg: { sourceName: string; staticName
 
   // find all (simple) functions and see if we can yeet them
   const functions = agg.rest.filter(
-    (s) => s.type === 'FunctionDeclaration' && analysis.vars.get(s.id.name)?.simple,
+    (s) =>
+      // fn only for now
+      s.type === 'FunctionDeclaration' &&
+      // too hard
+      analysis.vars.get(s.id.name)?.simple &&
+      // can't rewrite 'default'
+      s.id.name !== 'default',
   ) as acorn.FunctionDeclaration[];
 
-  const staticRemove = new Map<
-    string,
-    { source: acorn.FunctionDeclaration; locals: Set<string>; globals: Set<string> }
-  >();
+  // TODO: this is needed for React stuff, uses lots of default (but maybe not in _bundle_?)
+  agg.rest.forEach((s) => {
+    if (s.type === 'FunctionDeclaration' && s.id.name === 'default') {
+      // creates wacky code (decl without name), unsupported right now
+      throw new Error(`TODO: can't handle default fn yet`);
+    }
+  });
+
+  const staticRemove = new Map<string, { locals: Set<string>; globals: Set<string> }>();
+  const statementsToRemove = new Set<acorn.Statement>();
+  const moddefStatic = new ModDef();
 
   outer: for (const fn of functions) {
     const inner = analyzeFunction(fn);
@@ -52,19 +65,16 @@ export function extractStatic(raw: string, arg: { sourceName: string; staticName
       }
     }
 
+    statementsToRemove.add(fn);
     staticRemove.set(fn.id.name, {
-      source: fn,
       locals,
       globals,
     });
+    moddefStatic.addExportLocal(fn.id.name);
     agg.mod.addImport(arg.staticName, fn.id.name);
   }
 
-  const moddefStatic = new ModDef();
-
   // find any locals that are NOT being moved; we need to export them here
-  // const staticMustImport = new Map<string, { name: string; import?: string }>();
-  // const extraExport = new Set<string>();
   for (const info of staticRemove.values()) {
     // check if global was actually an import - copy it over to static file
     for (const global of info.globals) {
@@ -83,12 +93,6 @@ export function extractStatic(raw: string, arg: { sourceName: string; staticName
         moddefStatic.addImport(arg.sourceName, local);
       }
     }
-  }
-
-  // TODO: `default` is rewritten badly - special-case it?
-  const statementsToRemove = new Set<acorn.Statement>();
-  for (const { source } of staticRemove.values()) {
-    statementsToRemove.add(source);
   }
 
   let outMain = render(
