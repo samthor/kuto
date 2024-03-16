@@ -2,7 +2,9 @@
 
 set -eu
 
-npx esbuild --bundle --format=esm --outfile=demo-self/demo.js demo.ts --platform=node
-cd self
-node demo.js demo.js
-node dist/demo.js ../test.js
+mkdir -p demo/self
+cd demo/self
+
+npx esbuild --bundle --format=esm --outfile=self.js ../../demo.ts --platform=node
+node self.js self.js
+# node dist/demo.js ../test.js
