@@ -1,0 +1,38 @@
+{
+  "compilerOptions": {
+    "checkJs": true,
+    "noEmit": true,
+
+    // if you'd like to warn if you're using modern features, change these
+    // both to e.g., "es2017"
+    "module": "NodeNext",
+    "target": "ESNext",
+    "moduleResolution": "NodeNext",
+
+    // proper es6 support
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+
+    // configure as you like: these are my preferred defaults!
+    "strict": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+
+    // "strict" implies this, and it's good for new projects, but difficult to retrofit to old
+    // untyped projects
+    "noImplicitAny": true,
+
+    // modern TS stuff that allows lit-element to work
+    "experimentalDecorators": true,
+    "useDefineForClassFields": false,
+    "allowImportingTsExtensions": true,
+  },
+  "include": [
+    "*.js",
+    "**/*.js",
+    "*.ts",
+    "**/*.ts",
+    "*.tsx",
+    "**/*.tsx",
+  ],
+}

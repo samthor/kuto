@@ -1,0 +1,16 @@
+{
+  "type": "module",
+  "scripts": {
+    "test": "tsx test/"
+  },
+  "private": true,
+  "author": "Sam Thorogood <sam.thorogood@gmail.com>",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "acorn": "^8.11.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.28",
+    "tsx": "^4.7.1"
+  }
+}
