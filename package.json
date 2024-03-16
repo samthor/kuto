@@ -11,6 +11,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.11.28",
+    "esbuild": "^0.20.2",
     "tsx": "^4.7.1"
   }
 }

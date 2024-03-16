@@ -46,4 +46,4 @@ for (const [name, code] of out.source.static) {
   fs.writeFileSync(path.join(dist, name), code);
 }
 
-console.info('Ok');
+console.info('Ok!');

@@ -420,6 +420,7 @@ export function analyzeBlock(b: acorn.BlockStatement): AnalyzeBlock {
       case 'AssignmentExpression': {
         const p = processPattern(e.left);
         p.names.forEach((name) => markIdentifier(name, true));
+        p.init && processExpression(p.init);
         processExpression(e.right);
         break;
       }
