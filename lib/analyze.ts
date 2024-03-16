@@ -1,4 +1,4 @@
-import * as acorn from 'acorn';
+import type * as acorn from 'acorn';
 import { analyzeBlock, createBlock, createExpressionStatement } from './internal/analyze.ts';
 
 export type AnalyzeFunction = {

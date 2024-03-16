@@ -1,4 +1,4 @@
-import * as acorn from 'acorn';
+import type * as acorn from 'acorn';
 
 /**
  * Returns the following statements inside an immediately-invoked function expression.
