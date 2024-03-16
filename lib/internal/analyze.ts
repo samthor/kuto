@@ -21,6 +21,7 @@ function createIife(body: acorn.Statement[]): acorn.CallExpression {
       async: false,
       expression: true,
       generator: false,
+      // nb. this does NOT have an id; having an id makes this callable again
     },
     start: -1,
     end: -1,
@@ -374,9 +375,11 @@ export function analyzeBlock(b: acorn.BlockStatement): AnalyzeBlock {
     const prev = out.vars.get(name);
     if (prev) {
       prev.written ||= written;
-    } else {
-      out.vars.set(name, { nestedWrite: false, written });
+      return prev;
     }
+    const info: VarInfo = { written, nestedWrite: false };
+    out.vars.set(name, info);
+    return info;
   };
 
   const processExpression = (
@@ -425,9 +428,27 @@ export function analyzeBlock(b: acorn.BlockStatement): AnalyzeBlock {
 
       case 'NewExpression':
       case 'CallExpression':
-        // TODO: is this an iife, evaluate immediately and treat special
-        processExpression(e.callee);
         e.arguments.forEach((arg) => processExpression(arg));
+
+        if (
+          e.callee.type === 'ArrowFunctionExpression' ||
+          (e.callee.type === 'FunctionExpression' && !e.callee.id)
+        ) {
+          // this is an IIFE, 'run' immediately
+          const block = reductifyFunction(e.callee);
+          const inner = analyzeBlock(block);
+          for (const [key, info] of inner.vars) {
+            if (info.kind) {
+              continue;
+            }
+            const vi = markIdentifier(key, info.written);
+            vi.nestedWrite ||= info.nestedWrite;
+          }
+        } else {
+          // normal function - can be called whenever
+          processExpression(e.callee);
+        }
+
         break;
 
       case 'TemplateLiteral':

@@ -2,19 +2,16 @@ export {};
 
 // var naked;
 
-function foo(x = 123) {
-  zing++;
+(function () {
+  foo = 123;
+})();
+
+class Blah {
+  static {
+    zing = 123;
+  }
 }
 
-var x = {
-  y: function () {
-    void function () {
-      //      foo = function (x = 345) {};
-      foo();
-    };
-  },
-};
-
-import('foo');
-
-import.meta['whatever'];
+function unknown() {
+  zing = 12312341;
+}
