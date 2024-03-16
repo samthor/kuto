@@ -56,7 +56,7 @@ function createExpressionStatement(...body: acorn.Expression[]): acorn.Expressio
   };
 }
 
-function processPattern(p: acorn.Pattern) {
+export function processPattern(p: acorn.Pattern) {
   const names: string[] = [];
   const expr: acorn.Expression[] = [];
   const pending = [p];
@@ -80,7 +80,7 @@ function processPattern(p: acorn.Pattern) {
 
       case 'AssignmentPattern':
         pending.push(p.left);
-        expr.push(p.right); // TODO: not aprortioned to any specific name
+        expr.push(p.right);
         continue;
 
       case 'ObjectPattern':
@@ -368,7 +368,14 @@ export type AnalyzeBlock = {
   vars: Map<string, VarInfo>;
 };
 
-export function analyzeBlock(b: acorn.BlockStatement): AnalyzeBlock {
+export type AnalyzeCallbacks = {
+  onFunctionDeclaration: (fn: acorn.FunctionDeclaration) => boolean | void;
+};
+
+export function analyzeBlock(
+  b: acorn.BlockStatement,
+  callbacks?: Partial<AnalyzeCallbacks>,
+): AnalyzeBlock {
   const out: AnalyzeBlock = { vars: new Map() };
 
   const markIdentifier = (name: string, written: boolean = false) => {
