@@ -23,29 +23,18 @@ export { throughImport } from 'somewhere-file';
 
 //var x = zing;
 
-const foo = 123;
+var foo;
 
-{
-  x = 123;
-  var x;
-}
-
-+function () {
+function cannotYeet() {
   foo = 123;
-};
-
-function Foo() {
-  const c = new AbortController();
-  c.abort();
-  return c.signal;
 }
 
-export function Bar() {}
-export const ConstFunctionExpression = () => {};
+function canYeet() {
+  console.info(foo);
+}
 
-export { ConstFunctionExpression as RenamedConstFunctionExpression };
+function somethingElse() {
+  canYeet();
+}
 
-// iife allows change but still 'const' - can't run again
-(() => {
-  Bar = () => {};
-})();
+export { foo };

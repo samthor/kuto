@@ -118,6 +118,8 @@ export function aggregateImports(p: acorn.Program): AggregateImports {
   for (const node of p.body) {
     switch (node.type) {
       case 'VariableDeclaration': {
+        out.rest.push(node);
+
         if (node.kind !== 'const') {
           continue;
         }

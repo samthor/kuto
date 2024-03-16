@@ -47,7 +47,7 @@ export function createBlock(...body: acorn.Statement[]): acorn.BlockStatement {
   };
 }
 
-function createExpressionStatement(...body: acorn.Expression[]): acorn.ExpressionStatement {
+export function createExpressionStatement(...body: acorn.Expression[]): acorn.ExpressionStatement {
   return {
     type: 'ExpressionStatement',
     start: -1,
@@ -362,29 +362,30 @@ export type VarInfo = {
   written: boolean;
   nestedWrite: boolean;
   kind?: 'let' | 'var' | 'const';
+
+  /**
+   * This is `false` if the value is rewritten many times or inside a nested block.
+   */
+  simple: boolean;
 };
 
 export type AnalyzeBlock = {
   vars: Map<string, VarInfo>;
 };
 
-export type AnalyzeCallbacks = {
-  onFunctionDeclaration: (fn: acorn.FunctionDeclaration) => boolean | void;
-};
-
-export function analyzeBlock(
-  b: acorn.BlockStatement,
-  callbacks?: Partial<AnalyzeCallbacks>,
-): AnalyzeBlock {
+export function analyzeBlock(b: acorn.BlockStatement): AnalyzeBlock {
   const out: AnalyzeBlock = { vars: new Map() };
 
   const markIdentifier = (name: string, written: boolean = false) => {
     const prev = out.vars.get(name);
     if (prev) {
       prev.written ||= written;
+      if (written) {
+        prev.simple = false;
+      }
       return prev;
     }
-    const info: VarInfo = { written, nestedWrite: false };
+    const info: VarInfo = { written, nestedWrite: false, kind: undefined, simple: true };
     out.vars.set(name, info);
     return info;
   };
@@ -497,8 +498,16 @@ export function analyzeBlock(
           const nestedWrite = info.written || info.nestedWrite;
           if (prev) {
             prev.nestedWrite ||= nestedWrite;
+            if (nestedWrite) {
+              prev.simple = false;
+            }
           } else {
-            out.vars.set(key, { nestedWrite, written: false });
+            out.vars.set(key, {
+              nestedWrite,
+              written: false,
+              kind: undefined,
+              simple: !nestedWrite,
+            });
           }
         }
         break;
@@ -592,9 +601,10 @@ export function analyzeBlock(
             }
             prev.kind ||= simple.kind;
             prev.written ||= written;
+            prev.simple = false;
             continue;
           }
-          out.vars.set(name, { written, nestedWrite: false, kind: simple.kind });
+          out.vars.set(name, { written, nestedWrite: false, kind: simple.kind, simple: true });
         }
       }
 
