@@ -1,27 +1,8 @@
-export {};
-
 import { fromImport as localImport } from 'other-file';
-export { localImport };
-
+import { fromImport as localImport2 } from 'other-file';
+export { localImport as somethingElse };
 export { throughImport } from 'somewhere-file';
-
-// // var naked;
-
-// (function () {
-//   foo = 123;
-// })();
-
-// class Blah {
-//   static {
-//     zing = 123;
-//   }
-// }
-
-// function unknown() {
-//   zing = 12312341;
-// }
-
-//var x = zing;
+import * as whatever from 'blah';
 
 var foo;
 
@@ -30,11 +11,19 @@ function cannotYeet() {
 }
 
 function canYeet() {
+  cannotYeet();
+  localImport();
+  localImport2();
   console.info(foo);
 }
 
-function somethingElse() {
+export function exportedSomething() {
   canYeet();
 }
 
-export { foo };
+export { exportedSomething as exportedSomethingExtra };
+
+canYeet();
+
+var alwaysConst = 123;
+export { alwaysConst as alwaysConstExported };

@@ -1,13 +1,13 @@
-import * as acorn from 'acorn';
 import * as fs from 'node:fs';
-import { analyzeProgram } from './lib/analyze.ts';
+import * as path from 'node:path';
+import { extractStatic } from './lib/extract.ts';
 
-const raw = fs.readFileSync(process.argv[2], 'utf-8');
+const p = process.argv[2];
+const raw = fs.readFileSync(p, 'utf-8');
 
-const p = acorn.parse(raw, {
-  ecmaVersion: 'latest',
-  sourceType: 'module',
-});
+const parts = path.parse(p);
+const sourceName = './' + parts.base;
+const staticName = './' + parts.name + '.static.js';
 
-const out = analyzeProgram(p);
+const out = extractStatic(raw, { sourceName, staticName });
 console.info(out);
