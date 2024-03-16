@@ -5,7 +5,7 @@ export function foo() {
 }
 
 function bar() {
-  return x;
+  return x + 1;
 }
 
 function bar2() {

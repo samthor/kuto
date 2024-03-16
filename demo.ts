@@ -25,11 +25,25 @@ for (const e of existing) {
 }
 
 const out = extractStatic(args);
+const toRemove = existing.filter((e) => !out.source.static.has(e));
 
+const sizes: Record<string, number> = {};
+sizes[sourceName] = out.source.main.length;
+out.source.static.forEach((code, name) => (sizes[name] = code.length));
+
+console.info('stats', {
+  source: { size: source.length },
+  sizes,
+  remove: toRemove,
+});
+
+// write new files, nuke old ones
+for (const e of toRemove) {
+  fs.rmSync(path.join(dist, e));
+}
 fs.writeFileSync(path.join(dist, sourceName), out.source.main);
-
-for (const [name, info] of out.source.static) {
-  fs.writeFileSync(path.join(dist, name), info);
+for (const [name, code] of out.source.static) {
+  fs.writeFileSync(path.join(dist, name), code);
 }
 
 console.info('Ok');
