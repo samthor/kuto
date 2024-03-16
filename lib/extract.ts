@@ -3,6 +3,7 @@ import { aggregateImports } from './internal/module.ts';
 import { analyzeBlock, createBlock } from './internal/analyze.ts';
 import { analyzeFunction } from './analyze.ts';
 import { ModDef } from './internal/moddef.ts';
+import { withDefault } from './helper.ts';
 
 export type ExtractStaticArgs = {
   source: string;
@@ -34,6 +35,25 @@ export function extractStatic(args: ExtractStaticArgs) {
     }
   }
 
+  // analyze all static files
+  const existingByCode: Map<string, { name: string; import: string }> = new Map();
+  args.existingStaticSource.forEach((source, path) => {
+    const p = acorn.parse(source, { ecmaVersion: 'latest', sourceType: 'module' });
+    const agg = aggregateImports(p);
+
+    for (const r of agg.rest) {
+      if (r.type !== 'FunctionDeclaration') {
+        continue;
+      }
+
+      const code = source.substring(r.start, r.end);
+      if (existingByCode.has(code)) {
+        continue;
+      }
+      existingByCode.set(code, { name: r.id.name, import: path });
+    }
+  });
+
   // find all (simple) functions and see if we can yeet them
   const functions = agg.rest.filter(
     (s) =>
@@ -53,9 +73,20 @@ export function extractStatic(args: ExtractStaticArgs) {
     }
   });
 
-  const staticRemove = new Map<string, { locals: Set<string>; globals: Set<string> }>();
+  const staticRemove = new Map<
+    string,
+    { locals: Set<string>; globals: Set<string>; static: { mod: ModDef } }
+  >();
   const removeDecl = new Set<acorn.Statement>();
-  const moddefStatic = new ModDef();
+  // const moddefStatic = new ModDef();
+
+  const staticToWrite = new Map<
+    string,
+    {
+      mod: ModDef;
+      body: acorn.Statement[];
+    }
+  >();
 
   outer: for (const fn of functions) {
     const inner = analyzeFunction(fn);
@@ -73,13 +104,28 @@ export function extractStatic(args: ExtractStaticArgs) {
       }
     }
 
+    // find where to write this code - "old" or "new"
+    let targetStaticName = args.staticName;
+    const code = args.source.substring(fn.start, fn.end);
+    const existing = existingByCode.get(code);
+    if (existing) {
+      targetStaticName = existing.import;
+    }
+
+    const targetStatic = withDefault(staticToWrite, targetStaticName, () => ({
+      mod: new ModDef(),
+      body: [],
+    }));
+
     removeDecl.add(fn);
+    targetStatic.body.push(fn);
     staticRemove.set(fn.id.name, {
       locals,
       globals,
+      static: targetStatic,
     });
-    moddefStatic.addExportLocal(fn.id.name);
-    agg.mod.addImport(args.staticName, fn.id.name);
+    targetStatic.mod.addExportLocal(fn.id.name);
+    agg.mod.addImport(targetStaticName, fn.id.name);
   }
 
   // find any locals that are NOT being moved; we need to export them here
@@ -90,7 +136,7 @@ export function extractStatic(args: ExtractStaticArgs) {
       if (importInfo === undefined) {
         continue;
       }
-      moddefStatic.addImport(importInfo.import, global, importInfo.remote);
+      info.static.mod.addImport(importInfo.import, global, importInfo.remote);
     }
 
     // check locals we need to export from main - preemptively export it
@@ -98,7 +144,7 @@ export function extractStatic(args: ExtractStaticArgs) {
       if (!staticRemove.has(local)) {
         // TODO: if this exported name is already used by something else (??), this will crash
         agg.mod.addExportLocal(local);
-        moddefStatic.addImport(args.sourceName, local);
+        info.static.mod.addImport(args.sourceName, local);
       }
     }
   }
@@ -109,8 +155,12 @@ export function extractStatic(args: ExtractStaticArgs) {
   );
   outMain += agg.mod.renderSource();
 
-  let outStatic = render(args.source, removeDecl);
-  outStatic += moddefStatic.renderSource();
+  const outStatic = new Map<string, string>();
+  for (const [targetStaticName, info] of staticToWrite) {
+    let code = render(args.source, info.body);
+    code += info.mod.renderSource();
+    outStatic.set(targetStaticName, code);
+  }
 
   return {
     source: {

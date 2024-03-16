@@ -1,11 +1,4 @@
-function withDefault<K, V>(m: Map<K, V>, k: K, build: (k: K) => V): V {
-  if (m.has(k)) {
-    return m.get(k)!;
-  }
-  const update = build(k);
-  m.set(k, update);
-  return update;
-}
+import { relativize, withDefault } from '../helper.ts';
 
 type SourceInfo = {
   /**
@@ -74,10 +67,17 @@ export class ModDef {
   }
 
   private _addImport(importSource: string, localName: string, remoteName: string) {
+    const prev = this.byLocalName.get(localName);
+    if (prev) {
+      if (prev.import !== importSource || prev.remote !== remoteName) {
+        // only throw if different
+        throw new Error(`already local: ${localName} from ${importSource}`);
+      }
+      return;
+    }
+
     if (localName === '') {
       throw new Error(`can't have blank localName`);
-    } else if (this.byLocalName.has(localName)) {
-      throw new Error(`already local: ${localName}`);
     }
     this.byLocalName.set(localName, { import: importSource, remote: remoteName });
 
@@ -114,8 +114,13 @@ export class ModDef {
   }
 
   addExportLocal(exportedName: string, sourceName: string = exportedName) {
-    if (this._exports.has(exportedName)) {
-      throw new Error(`already exported: ${exportedName}`);
+    const prev = this._exports.get(exportedName);
+    if (prev) {
+      if (prev.import || prev.name !== sourceName) {
+        // only throw if different
+        throw new Error(`already exported: ${exportedName}`);
+      }
+      return;
     }
     const p = { name: sourceName };
     this._exports.set(exportedName, p);
@@ -126,6 +131,8 @@ export class ModDef {
     const lines: string[] = [];
 
     for (const [path, info] of this.bySource) {
+      const pj = JSON.stringify(relativize(path));
+
       // if (path === '') {
       //   // special-case
       //   if (info.imports.size || info.reexportAll) {
@@ -147,7 +154,7 @@ export class ModDef {
       let any = false;
 
       for (const localName of info.imports.get('') ?? []) {
-        lines.push(`import * as ${localName} from ${JSON.stringify(path)}`);
+        lines.push(`import * as ${localName} from ${pj}`);
         any = true;
       }
 
@@ -161,12 +168,12 @@ export class ModDef {
         }
       }
       if (parts.length) {
-        lines.push(`import { ${parts.join(', ')} } from ${JSON.stringify(path)}`);
+        lines.push(`import { ${parts.join(', ')} } from ${pj}`);
         any = true;
       }
 
       if (info.reexportAll) {
-        lines.push(`export * from ${JSON.stringify(path)}`);
+        lines.push(`export * from ${pj}`);
       }
 
       // TODO: if these are here with local names, we could instead pick one and re-export
@@ -177,12 +184,12 @@ export class ModDef {
         }
       }
       if (reexportParts.length) {
-        lines.push(`export { ${reexportParts.join(', ')} } from ${JSON.stringify(path)}`);
+        lines.push(`export { ${reexportParts.join(', ')} } from ${pj}`);
         any = true;
       }
 
       if (!any) {
-        lines.push(`import ${JSON.stringify(path)}`);
+        lines.push(`import ${pj}`);
       }
     }
 

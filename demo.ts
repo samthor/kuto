@@ -28,8 +28,8 @@ const out = extractStatic(args);
 
 fs.writeFileSync(path.join(dist, sourceName), out.source.main);
 
-if (out.source.static) {
-  fs.writeFileSync(path.join(dist, staticName), out.source.static);
+for (const [name, info] of out.source.static) {
+  fs.writeFileSync(path.join(dist, name), info);
 }
 
 console.info('Ok');

@@ -5,7 +5,6 @@ import { ModDef } from './moddef.ts';
 export type AggregateImports = {
   mod: ModDef;
   localConst: Set<string>;
-  declarationExports: Map<string, acorn.ExportNamedDeclaration | acorn.ExportDefaultDeclaration>;
   rest: acorn.Statement[];
 };
 
@@ -58,7 +57,6 @@ export function aggregateImports(p: acorn.Program): AggregateImports {
   const out: AggregateImports = {
     mod: new ModDef(),
     localConst: new Set(),
-    declarationExports: new Map(),
     rest: [],
   };
 

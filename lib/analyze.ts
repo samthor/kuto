@@ -1,5 +1,4 @@
 import * as acorn from 'acorn';
-import { aggregateImports } from './internal/module.ts';
 import { analyzeBlock, createBlock, createExpressionStatement } from './internal/analyze.ts';
 
 export type AnalyzeFunction = {

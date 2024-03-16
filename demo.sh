@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -eu
+
 rm -rf dist
 
 # run twice to prove re-use
