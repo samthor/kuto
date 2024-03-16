@@ -12,6 +12,7 @@ export function extractStatic(raw: string, arg: { sourceName: string; staticName
 
   // resolve whether local vars are const - look for writes inside later callables
   // TODO: this doesn't explicitly mark their exported names as const, can look later?
+  // nb. not _actually_ used yet
   for (const name of agg.mod.localExported()) {
     if (agg.localConst.has(name)) {
       continue;
