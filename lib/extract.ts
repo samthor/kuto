@@ -4,8 +4,15 @@ import { analyzeBlock, createBlock } from './internal/analyze.ts';
 import { analyzeFunction } from './analyze.ts';
 import { ModDef } from './internal/moddef.ts';
 
-export function extractStatic(raw: string, arg: { sourceName: string; staticName: string }) {
-  const p = acorn.parse(raw, { ecmaVersion: 'latest', sourceType: 'module' });
+export type ExtractStaticArgs = {
+  source: string;
+  sourceName: string;
+  staticName: string;
+  existingStaticSource: Map<string, string>;
+};
+
+export function extractStatic(args: ExtractStaticArgs) {
+  const p = acorn.parse(args.source, { ecmaVersion: 'latest', sourceType: 'module' });
 
   const agg = aggregateImports(p);
   const analysis = analyzeBlock(createBlock(...agg.rest));
@@ -47,7 +54,7 @@ export function extractStatic(raw: string, arg: { sourceName: string; staticName
   });
 
   const staticRemove = new Map<string, { locals: Set<string>; globals: Set<string> }>();
-  const statementsToRemove = new Set<acorn.Statement>();
+  const removeDecl = new Set<acorn.Statement>();
   const moddefStatic = new ModDef();
 
   outer: for (const fn of functions) {
@@ -66,13 +73,13 @@ export function extractStatic(raw: string, arg: { sourceName: string; staticName
       }
     }
 
-    statementsToRemove.add(fn);
+    removeDecl.add(fn);
     staticRemove.set(fn.id.name, {
       locals,
       globals,
     });
     moddefStatic.addExportLocal(fn.id.name);
-    agg.mod.addImport(arg.staticName, fn.id.name);
+    agg.mod.addImport(args.staticName, fn.id.name);
   }
 
   // find any locals that are NOT being moved; we need to export them here
@@ -91,33 +98,30 @@ export function extractStatic(raw: string, arg: { sourceName: string; staticName
       if (!staticRemove.has(local)) {
         // TODO: if this exported name is already used by something else (??), this will crash
         agg.mod.addExportLocal(local);
-        moddefStatic.addImport(arg.sourceName, local);
+        moddefStatic.addImport(args.sourceName, local);
       }
     }
   }
 
   let outMain = render(
-    raw,
-    agg.rest.filter((source) => !statementsToRemove.has(source)),
+    args.source,
+    agg.rest.filter((s) => !removeDecl.has(s)),
   );
   outMain += agg.mod.renderSource();
 
-  let outStatic = render(
-    raw,
-    agg.rest.filter((source) => statementsToRemove.has(source)),
-  );
+  let outStatic = render(args.source, removeDecl);
   outStatic += moddefStatic.renderSource();
 
   return {
     source: {
-      original: raw,
+      original: args.source,
       main: outMain,
       static: outStatic,
     },
   };
 }
 
-function render(raw: string, parts: { start: number; end: number }[]) {
+function render(raw: string, parts: Iterable<{ start: number; end: number }>) {
   let out = '';
   for (const p of parts) {
     out += raw.substring(p.start, p.end) + '\n'; // TODO: semi for safety?
