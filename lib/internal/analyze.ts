@@ -167,6 +167,25 @@ function reductifyClassParts(c: acorn.Class): acorn.Expression {
 function reductifyFunction(f: acorn.Function): acorn.BlockStatement {
   const body: acorn.Statement[] = [];
 
+  // our own function name becomes something we can reference
+  if (f.id?.name && f.id.name !== 'default') {
+    const decl: acorn.VariableDeclaration = {
+      type: 'VariableDeclaration',
+      start: -1,
+      end: -1,
+      kind: 'var',
+      declarations: [
+        {
+          type: 'VariableDeclarator',
+          start: f.id.start,
+          end: f.id.end,
+          id: f.id,
+        },
+      ],
+    };
+    body.push(decl);
+  }
+
   if (f.params.length) {
     const decl: acorn.VariableDeclaration = {
       type: 'VariableDeclaration',
