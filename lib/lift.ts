@@ -10,24 +10,37 @@ export function liftDefault(e: StaticExtractor, minSize: number) {
     }
   }
 
-  // find things on the right of "="
-  const maybeLiftExpr: acorn.Expression[] = [
-    ...(e.block.body
-      .map((s) =>
-        s.type === 'ExpressionStatement' && s.expression.type === 'AssignmentExpression'
-          ? s.expression.right
-          : null,
-      )
-      .filter((x) => x !== null) as acorn.FunctionExpression[]),
-    ...(e.block.body
-      .map((s) => (s.type === 'VariableDeclaration' ? s.declarations.map((d) => d.init) : []))
-      .flat()
-      .filter((x) => x !== null) as acorn.Expression[]),
-  ].filter((expr) => {
-    const size = expr.end - expr.start;
-    return size >= minSize;
-  });
+  const maybeLiftExpr: acorn.Expression[] = [];
+  for (const part of e.block.body) {
+    switch (part.type) {
+      case 'ExpressionStatement':
+        if (part.expression.type === 'AssignmentExpression') {
+          // find things on the right of "="
+          // this won't lift normally (the left part changes)
+          maybeLiftExpr.push(part.expression.right);
+        } else {
+          // try the whole thing? :shrug:
+          maybeLiftExpr.push(part.expression);
+        }
+        continue;
+
+      case 'VariableDeclaration':
+        for (const decl of part.declarations) {
+          decl.init && maybeLiftExpr.push(decl.init);
+        }
+        continue;
+
+      case 'ReturnStatement':
+        // why not? might be big
+        part.argument && maybeLiftExpr.push(part.argument);
+        continue;
+    }
+  }
+
   for (const expr of maybeLiftExpr) {
-    e.liftExpression(expr);
+    const size = expr.end - expr.start;
+    if (size >= minSize) {
+      e.liftExpression(expr);
+    }
   }
 }

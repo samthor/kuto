@@ -3,7 +3,7 @@ import * as path from 'node:path';
 import { ExtractStaticArgs, StaticExtractor } from './lib/extractor.ts';
 import { liftDefault } from './lib/lift.ts';
 
-const MIN_SIZE = 48;
+const MIN_SIZE = 32;
 const dist = 'dist';
 
 fs.mkdirSync(dist, { recursive: true });
@@ -38,10 +38,12 @@ liftDefault(e, MIN_SIZE);
 const out = e.build();
 const toRemove = existing.filter((e) => !out.static.has(e));
 
-// generate stats
+// generate stats, show most recent first
 const sizes: Record<string, number> = {};
 sizes[sourceName] = out.main.length;
-out.static.forEach((code, name) => (sizes[name] = code.length));
+const statics = [...out.static].sort(([a], [b]) => b.localeCompare(a));
+statics.forEach(([name, code]) => (sizes[name] = code.length));
+
 console.info('stats', {
   source: { size: source.length },
   sizes,
