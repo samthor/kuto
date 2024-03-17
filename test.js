@@ -1,30 +1,13 @@
-let x = 123;
-
-export function foo() {
-  ++x;
-}
-
-function bar() {
-  return x + 1;
-}
-
-function bar2() {
-  return x + 2;
+function foo() {
+  console.info('hello there');
 }
 
 foo();
-bar();
-bar2();
-console.info('bar', bar());
 
-function whatever() {
-  if (1) {
-    if (somethingElse()) {
-      throw 123;
-    }
-  }
-}
+let whatever = {};
 
-function somethingElse() {
-  return 123;
-}
+whatever.func = function () {
+  return 'A function lol that is set on an object';
+};
+
+export { whatever };

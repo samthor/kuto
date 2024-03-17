@@ -93,6 +93,22 @@ export class ModDef {
     return this._addImport(importSource, localName, remoteName);
   }
 
+  removeImport(localName: string) {
+    const prev = this.byLocalName.get(localName);
+    if (!prev) {
+      return false;
+    }
+
+    this.byLocalName.delete(localName);
+    const info = this.bySource.get(prev.import)!;
+    const s = withDefault(info.imports, prev.remote, () => new Set());
+    s.delete(localName);
+    if (s.size === 0) {
+      info.imports.delete(prev.remote);
+    }
+    return false;
+  }
+
   addExportFrom(importSource: string, exportedName: string, remoteName: string = '') {
     if (this._exports.has(exportedName)) {
       throw new Error(`already exported: ${exportedName}`);
@@ -121,6 +137,16 @@ export class ModDef {
     const p = { name: sourceName };
     this._exports.set(exportedName, p);
     this.allLocalExported.set(exportedName, p);
+  }
+
+  removeExportLocal(exportedName: string) {
+    const prev = this._exports.get(exportedName);
+    if (!prev) {
+      return false;
+    }
+    this._exports.delete(exportedName);
+    this.allLocalExported.delete(exportedName);
+    return true;
   }
 
   renderSource() {

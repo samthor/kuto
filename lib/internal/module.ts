@@ -6,6 +6,7 @@ export type AggregateImports = {
   mod: ModDef;
   localConst: Set<string>;
   rest: acorn.Statement[];
+  moduleNodes: acorn.Node[];
 };
 
 const fakeDefaultIdentifier: acorn.Identifier = Object.freeze({
@@ -58,9 +59,10 @@ export function aggregateImports(p: acorn.Program): AggregateImports {
     mod: new ModDef(),
     localConst: new Set(),
     rest: [],
+    moduleNodes: [],
   };
 
-  // early pass: ordering
+  // early pass: ordering + record module parts
 
   for (const node of p.body) {
     switch (node.type) {
@@ -71,8 +73,16 @@ export function aggregateImports(p: acorn.Program): AggregateImports {
           const importSource = node.source.value as string;
           out.mod.addSource(importSource);
         }
+        break;
+
+      case 'ExportDefaultDeclaration':
+        break;
+
+      default:
         continue;
     }
+
+    out.moduleNodes.push(node);
   }
 
   // main pass
