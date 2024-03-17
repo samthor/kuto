@@ -8,7 +8,7 @@ import {
 } from './internal/analyze.ts';
 import { analyzeFunction } from './analyze.ts';
 import { withDefault } from './helper.ts';
-import { ModDef } from './internal/moddef.ts';
+import { ImportInfo, ModDef } from './internal/moddef.ts';
 
 export type ExtractStaticArgs = {
   source: string;
@@ -168,21 +168,32 @@ export class StaticExtractor {
 
   private findVars(arg: FindType) {
     const globals = new Set<string>();
+    const imports = new Map<string, ImportInfo>();
     const locals = new Map<string, boolean>();
     let anyRw = false;
-    let localAccess = false;
+    let immediateAccess = false;
 
     for (const [key, check] of arg) {
       const vi = this.vars.get(key)!;
       if (!vi.kind) {
-        globals.add(key); // might be an import into main file
+        const importInfo = this.agg.mod.lookupImport(key);
+        if (importInfo) {
+          imports.set(key, importInfo);
+          continue;
+        }
+
+        globals.add(key);
+        if (typeof check === 'object' && check.local) {
+          // used global outside function, could be anything - can't allow
+          immediateAccess = true;
+        }
         continue;
       }
 
       let rw: boolean;
       if (typeof check === 'object') {
         rw = check.written || check.nestedWrite;
-        localAccess ||= check.local;
+        immediateAccess ||= check.local;
       } else {
         rw = check;
       }
@@ -190,7 +201,7 @@ export class StaticExtractor {
       locals.set(key, rw);
     }
 
-    return { globals, locals, rw: anyRw, localAccess };
+    return { globals, imports, locals, rw: anyRw, immediateAccess };
   }
 
   private addCodeToStatic(args: { node: acorn.Node; find: FindType; decl?: boolean }) {
@@ -198,7 +209,7 @@ export class StaticExtractor {
     if (find.rw) {
       return null; // no support for rw
     }
-    if (find.localAccess) {
+    if (find.immediateAccess) {
       return null; // TODO: skip for now
     }
 
@@ -247,13 +258,9 @@ export class StaticExtractor {
       this.agg.mod.addImport(targetStaticName, name);
     }
 
-    // redirect external imports (globals that are from another source)
-    for (const g of find.globals) {
-      const importInfo = this.agg.mod.lookupImport(g);
-      if (importInfo === undefined) {
-        continue; // actual global! ignore
-      }
-      targetStatic.mod.addImport(importInfo.import, g, importInfo.remote);
+    // clone imports needed to run this code (order is maintained in main file)
+    for (const [key, importInfo] of find.imports) {
+      targetStatic.mod.addImport(importInfo.import, key, importInfo.remote);
     }
 
     // import locals from main (this might be a complex redir)

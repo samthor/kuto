@@ -1,7 +1,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { ExtractStaticArgs, StaticExtractor } from './lib/extractor.ts';
-import type * as acorn from 'acorn';
+import { liftDefault } from './lib/lift.ts';
 
 const dist = 'dist';
 
@@ -32,29 +32,7 @@ for (const e of existing) {
 
 const e = new StaticExtractor(args);
 
-for (const part of e.block.body) {
-  if (part.type !== 'FunctionDeclaration') {
-    continue;
-  }
-  e.liftFunctionDeclaration(part);
-}
-
-const maybeLiftExpr: acorn.Expression[] = [
-  ...(e.block.body
-    .map((s) =>
-      s.type === 'ExpressionStatement' && s.expression.type === 'AssignmentExpression'
-        ? s.expression.right
-        : null,
-    )
-    .filter((x) => x !== null) as acorn.FunctionExpression[]),
-  ...(e.block.body
-    .map((s) => (s.type === 'VariableDeclaration' ? s.declarations.map((d) => d.init) : []))
-    .flat()
-    .filter((x) => x !== null) as acorn.Expression[]),
-];
-for (const expr of maybeLiftExpr) {
-  e.liftExpression(expr);
-}
+liftDefault(e, 1);
 
 const out = e.build();
 const toRemove = existing.filter((e) => !out.static.has(e));

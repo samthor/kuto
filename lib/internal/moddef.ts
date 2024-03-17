@@ -25,12 +25,17 @@ function safeImportAs(from: string, to: string = from) {
   return `${from} as ${to}`;
 }
 
+export type ImportInfo = {
+  import: string;
+  remote: string;
+};
+
 /**
  * ModDef contains mutable module import/export information for a single file.
  */
 export class ModDef {
   private bySource: Map<string, SourceInfo> = new Map();
-  private byLocalName: Map<string, { import: string; remote: string }> = new Map();
+  private byLocalName: Map<string, ImportInfo> = new Map();
   private _exports: Map<string, { import?: string; name: string }> = new Map();
   private allLocalExported: Map<string, { name: string }> = new Map();
 
@@ -49,7 +54,7 @@ export class ModDef {
     }
   }
 
-  lookupImport(name: string): { import: string; remote: string } | undefined {
+  lookupImport(name: string): ImportInfo | undefined {
     const o = this.byLocalName.get(name);
     return o ? { ...o } : undefined;
   }

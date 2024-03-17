@@ -1,7 +1,6 @@
 let y = 123;
-var x = 1 + 2 + y + z;
+void (function foo() {
+  console.info('this function is really long now helo whatever', y);
+})();
 
-var test =
-  function foo() {
-    y, x;
-  } + y;
+let consoleTest = console.info('butts');
