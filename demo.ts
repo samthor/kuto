@@ -3,6 +3,7 @@ import * as path from 'node:path';
 import { ExtractStaticArgs, StaticExtractor } from './lib/extractor.ts';
 import { liftDefault } from './lib/lift.ts';
 
+const MIN_SIZE = 48;
 const dist = 'dist';
 
 fs.mkdirSync(dist, { recursive: true });
@@ -13,8 +14,8 @@ const source = fs.readFileSync(p, 'utf-8');
 const now = +new Date();
 
 const parts = path.parse(p);
-const sourceName = './' + parts.base;
-const staticName = './' + parts.name + `.sjs-${now.toString(36).padStart(8, '0')}.js`;
+const sourceName = parts.base;
+const staticName = parts.name + `.sjs-${now.toString(36).padStart(8, '0')}.js`;
 
 const args: ExtractStaticArgs = {
   source,
@@ -31,16 +32,16 @@ for (const e of existing) {
 }
 
 const e = new StaticExtractor(args);
+liftDefault(e, MIN_SIZE);
 
-liftDefault(e, 1);
-
+// run
 const out = e.build();
 const toRemove = existing.filter((e) => !out.static.has(e));
 
+// generate stats
 const sizes: Record<string, number> = {};
 sizes[sourceName] = out.main.length;
 out.static.forEach((code, name) => (sizes[name] = code.length));
-
 console.info('stats', {
   source: { size: source.length },
   sizes,

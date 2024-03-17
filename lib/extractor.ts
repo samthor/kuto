@@ -10,6 +10,9 @@ import { analyzeFunction } from './analyze.ts';
 import { withDefault } from './helper.ts';
 import { ImportInfo, ModDef } from './internal/moddef.ts';
 
+const normalStaticPrefix = '_';
+const callableStaticPrefix = '$';
+
 export type ExtractStaticArgs = {
   source: string;
   sourceName: string;
@@ -43,8 +46,17 @@ function extractExistingStaticCode(raw: Iterable<[string, string]>) {
 
         case 'VariableDeclaration': {
           for (const decl of r.declarations) {
-            if (decl.init && decl.id.type === 'Identifier') {
-              add(decl.init, decl.id.name);
+            if (!(decl.init && decl.id.type === 'Identifier')) {
+              continue;
+            }
+            const name = decl.id.name;
+            if (name.startsWith(callableStaticPrefix)) {
+              if (decl.init.type !== 'ArrowFunctionExpression') {
+                continue;
+              }
+              add(decl.init.body, name);
+            } else {
+              add(decl.init, name);
             }
           }
           break;
@@ -65,7 +77,7 @@ export class StaticExtractor {
   private args: ExtractStaticArgs;
   private agg: AggregateImports;
   private vars: Map<string, VarInfo>;
-  private existingByCode: Map<string, { name: string; import: string }>;
+  private existingByCode: Map<string, { name: string; import: string; here?: boolean }>;
   private _block: acorn.BlockStatement;
 
   private staticToWrite = new Map<
@@ -136,7 +148,7 @@ export class StaticExtractor {
   /**
    * Finds and returns a new valid variable name for the static file.
    */
-  private varForStatic(staticName: string, prefix = '_') {
+  private varForStatic(staticName: string, prefix: string) {
     for (let i = 1; i < 10_000; ++i) {
       const cand = `${prefix}${i.toString(36)}`;
       const check = `${cand}~${staticName}`;
@@ -209,8 +221,9 @@ export class StaticExtractor {
     if (find.rw) {
       return null; // no support for rw
     }
-    if (find.immediateAccess) {
-      return null; // TODO: skip for now
+    if (!args.decl && find.immediateAccess) {
+      // TODO: wrong for class defs
+      throw new Error(`top-level fn should not have immediateAccess`);
     }
 
     let name: string = '';
@@ -225,7 +238,10 @@ export class StaticExtractor {
     // determine what name this has (generated or part of the fn/class hoisted)
     if (!name) {
       if (args.decl) {
-        name = this.varForStatic(targetStaticName);
+        name = this.varForStatic(
+          targetStaticName,
+          find.immediateAccess ? callableStaticPrefix : normalStaticPrefix,
+        );
       } else if ('id' in args.node) {
         const id = args.node.id as acorn.Identifier;
         if (id.type === 'Identifier') {
@@ -237,6 +253,9 @@ export class StaticExtractor {
       throw new Error(`could not name code put into static: ${args}`);
     }
 
+    // future callers may _also_ get this - maybe the source code does the same thing a lot?
+    this.existingByCode.set(code, { name, import: targetStaticName, here: true });
+
     // add to static file
     const targetStatic = withDefault(this.staticToWrite, targetStaticName, () => ({
       globalInMain: this.varForMain(),
@@ -244,14 +263,33 @@ export class StaticExtractor {
       body: [],
       here: new Set<string>(),
     }));
-    targetStatic.body.push(args.decl ? `const ${name} = ${code};` : code);
+    if (args.decl) {
+      if (find.immediateAccess) {
+        if (code.startsWith('{')) {
+          // acorn 'eats' the extra () before it returns, so nothing is needed on the other side
+          code = `const ${name} = () => (${code});`;
+        } else {
+          code = `const ${name} = () => ${code};`;
+        }
+      } else {
+        // can evaluate immediately
+        code = `const ${name} = ${code};`;
+      }
+    }
+
+    // don't push code again if we have effectively the same
+    if (!existing?.here) {
+      targetStatic.body.push(code);
+    }
     targetStatic.here.add(name);
 
     // export from static back to main, replacing previous version of whatever
     targetStatic.mod.addExportLocal(name);
     if (args.decl) {
       // TODO: referencing a global import isn't nessecarily smaller
-      this.nodesToReplace.set(args.node, `${targetStatic.globalInMain}.${name}`);
+      const replacedCode =
+        `${targetStatic.globalInMain}.${name}` + (find.immediateAccess ? '()' : '');
+      this.nodesToReplace.set(args.node, replacedCode);
       this.agg.mod.addGlobalImport(targetStaticName, targetStatic.globalInMain);
     } else {
       this.nodesToReplace.set(args.node, ''); // clear, fn appears via import
@@ -260,7 +298,11 @@ export class StaticExtractor {
 
     // clone imports needed to run this code (order is maintained in main file)
     for (const [key, importInfo] of find.imports) {
-      targetStatic.mod.addImport(importInfo.import, key, importInfo.remote);
+      if (importInfo.remote) {
+        targetStatic.mod.addImport(importInfo.import, key, importInfo.remote);
+      } else {
+        targetStatic.mod.addGlobalImport(importInfo.import, key);
+      }
     }
 
     // import locals from main (this might be a complex redir)
