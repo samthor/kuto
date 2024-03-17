@@ -17,7 +17,7 @@ export type ExtractStaticArgs = {
   existingStaticSource: Map<string, string>;
 };
 
-type FindType = Map<string, boolean | { written: boolean; nestedWrite: boolean }>;
+type FindType = Map<string, boolean | VarInfo>;
 
 function extractExistingStaticCode(raw: Iterable<[string, string]>) {
   const existingByCode: Map<string, { name: string; import: string }> = new Map();
@@ -153,7 +153,13 @@ export class StaticExtractor {
       const cand = `${prefix}${i.toString(36)}`;
       if (!this.vars.has(cand)) {
         // pretend to be global
-        this.vars.set(cand, { nestedWrite: false, simple: false, written: false, kind: undefined });
+        this.vars.set(cand, {
+          nestedWrite: false,
+          simple: false,
+          written: false,
+          local: true,
+          kind: undefined,
+        });
         return cand;
       }
     }
@@ -164,6 +170,7 @@ export class StaticExtractor {
     const globals = new Set<string>();
     const locals = new Map<string, boolean>();
     let anyRw = false;
+    let localAccess = false;
 
     for (const [key, check] of arg) {
       const vi = this.vars.get(key)!;
@@ -175,6 +182,7 @@ export class StaticExtractor {
       let rw: boolean;
       if (typeof check === 'object') {
         rw = check.written || check.nestedWrite;
+        localAccess ||= check.local;
       } else {
         rw = check;
       }
@@ -182,13 +190,16 @@ export class StaticExtractor {
       locals.set(key, rw);
     }
 
-    return { globals, locals, rw: anyRw };
+    return { globals, locals, rw: anyRw, localAccess };
   }
 
   private addCodeToStatic(args: { node: acorn.Node; find: FindType; decl?: boolean }) {
     const find = this.findVars(args.find);
     if (find.rw) {
       return null; // no support for rw
+    }
+    if (find.localAccess) {
+      return null; // TODO: skip for now
     }
 
     let name: string = '';
@@ -263,11 +274,6 @@ export class StaticExtractor {
   }
 
   liftExpression(e: acorn.Expression) {
-    if (!(e.type === 'FunctionExpression' || e.type === 'ArrowFunctionExpression')) {
-      // TODO: later, can handle stateless (no deps - big literals, arrays etc)
-      return null;
-    }
-
     const { vars } = analyzeBlock(createBlock(createExpressionStatement(e)));
     this.addCodeToStatic({ node: e, find: vars, decl: true });
   }

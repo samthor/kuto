@@ -383,6 +383,11 @@ export type VarInfo = {
   kind?: 'let' | 'var' | 'const';
 
   /**
+   * If local, access is outside any wrapped callable (except IIFEs).
+   */
+  local: boolean;
+
+  /**
    * This is `false` if the value is rewritten many times or inside a nested block.
    */
   simple: boolean;
@@ -402,9 +407,16 @@ export function analyzeBlock(b: acorn.BlockStatement): AnalyzeBlock {
         prev.simple = false;
       }
       prev.written ||= written;
+      prev.local = true;
       return prev;
     }
-    const info: VarInfo = { written, nestedWrite: false, kind: undefined, simple: true };
+    const info: VarInfo = {
+      written,
+      nestedWrite: false,
+      kind: undefined,
+      local: true,
+      simple: true,
+    };
     out.vars.set(name, info);
     return info;
   };
@@ -526,6 +538,7 @@ export function analyzeBlock(b: acorn.BlockStatement): AnalyzeBlock {
               nestedWrite,
               written: false,
               kind: undefined,
+              local: false,
               simple: !nestedWrite,
             });
           }
@@ -625,9 +638,16 @@ export function analyzeBlock(b: acorn.BlockStatement): AnalyzeBlock {
             }
             prev.kind ||= simple.kind;
             prev.written ||= written;
+            prev.local = true;
             continue;
           }
-          out.vars.set(name, { written, nestedWrite: false, kind: simple.kind, simple: true });
+          out.vars.set(name, {
+            written,
+            nestedWrite: false,
+            kind: simple.kind,
+            local: true,
+            simple: true,
+          });
         }
       }
 

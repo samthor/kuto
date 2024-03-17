@@ -1,13 +1,7 @@
-function foo() {
-  console.info('hello there');
-}
+let y = 123;
+var x = 1 + 2 + y + z;
 
-foo();
-
-let whatever = {};
-
-whatever.func = function () {
-  return 'A function lol that is set on an object';
-};
-
-export { whatever };
+var test =
+  function foo() {
+    y, x;
+  } + y;
