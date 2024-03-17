@@ -67,11 +67,11 @@ export class StaticExtractor {
   private vars: Map<string, VarInfo>;
   private existingByCode: Map<string, { name: string; import: string }>;
   private _block: acorn.BlockStatement;
-  private count = 0;
 
   private staticToWrite = new Map<
     string,
     {
+      globalInMain: string;
       mod: ModDef;
       body: (string | acorn.Statement)[];
       here: Set<string>;
@@ -138,7 +138,7 @@ export class StaticExtractor {
    */
   private varForStatic(staticName: string, prefix = '_') {
     for (let i = 1; i < 10_000; ++i) {
-      const cand = `${prefix}${i}`;
+      const cand = `${prefix}${i.toString(36)}`;
       const check = `${cand}~${staticName}`;
       if (!this.staticVars.has(check)) {
         this.staticVars.add(check);
@@ -146,6 +146,18 @@ export class StaticExtractor {
       }
     }
     throw new Error(`could not make var for static: ${staticName}`);
+  }
+
+  private varForMain(prefix = '$') {
+    for (let i = 1; i < 10_000; ++i) {
+      const cand = `${prefix}${i.toString(36)}`;
+      if (!this.vars.has(cand)) {
+        // pretend to be global
+        this.vars.set(cand, { nestedWrite: false, simple: false, written: false, kind: undefined });
+        return cand;
+      }
+    }
+    throw new Error(`could not make var for main`);
   }
 
   private findVars(arg: FindType) {
@@ -203,13 +215,9 @@ export class StaticExtractor {
       throw new Error(`could not name code put into static: ${args}`);
     }
 
-    // TODO: (for decl) guessing at valid names in main
-    const localName = args.decl ? `_${++this.count}` : name;
-
-    // remove from output
-    this.nodesToReplace.set(args.node, args.decl ? localName : '');
-
+    // add to static file
     const targetStatic = withDefault(this.staticToWrite, targetStaticName, () => ({
+      globalInMain: this.varForMain(),
       mod: new ModDef(),
       body: [],
       here: new Set<string>(),
@@ -217,9 +225,16 @@ export class StaticExtractor {
     targetStatic.body.push(args.decl ? `const ${name} = ${code};` : code);
     targetStatic.here.add(name);
 
-    // export from static back to main
+    // export from static back to main, replacing previous version of whatever
     targetStatic.mod.addExportLocal(name);
-    this.agg.mod.addImport(targetStaticName, localName, name);
+    if (args.decl) {
+      // TODO: referencing a global import isn't nessecarily smaller
+      this.nodesToReplace.set(args.node, `${targetStatic.globalInMain}.${name}`);
+      this.agg.mod.addGlobalImport(targetStaticName, targetStatic.globalInMain);
+    } else {
+      this.nodesToReplace.set(args.node, ''); // clear, fn appears via import
+      this.agg.mod.addImport(targetStaticName, name);
+    }
 
     // redirect external imports (globals that are from another source)
     for (const g of find.globals) {
