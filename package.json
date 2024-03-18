@@ -9,7 +9,7 @@
     "tsx": "^4.7.1"
   },
   "scripts": {
-    "prepublishOnly": "release.sh"
+    "prepublishOnly": "bash release.sh"
   },
   "bin": {
     "kuto": "./dist/app.js"
