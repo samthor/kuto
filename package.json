@@ -3,7 +3,6 @@
   "scripts": {
     "test": "tsx test/"
   },
-  "private": true,
   "author": "Sam Thorogood <sam.thorogood@gmail.com>",
   "license": "Apache-2.0",
   "dependencies": {
@@ -13,5 +12,7 @@
     "@types/node": "^20.11.28",
     "esbuild": "^0.20.2",
     "tsx": "^4.7.1"
-  }
+  },
+  "name": "kuto",
+  "version": "0.1.0"
 }

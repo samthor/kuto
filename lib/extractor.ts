@@ -310,6 +310,7 @@ export class StaticExtractor {
       this.agg.mod.addExportLocal(l);
       targetStatic.mod.addImport(this.args.sourceName, l);
     }
+    return {};
   }
 
   liftFunctionDeclaration(fn: acorn.FunctionDeclaration) {
@@ -319,12 +320,12 @@ export class StaticExtractor {
     }
 
     const { external } = analyzeFunction(fn);
-    this.addCodeToStatic({ node: fn, find: external });
+    return this.addCodeToStatic({ node: fn, find: external });
   }
 
   liftExpression(e: acorn.Expression) {
     const { vars } = analyzeBlock(createBlock(createExpressionStatement(e)));
-    this.addCodeToStatic({ node: e, find: vars, decl: true });
+    return this.addCodeToStatic({ node: e, find: vars, decl: true });
   }
 
   build() {
