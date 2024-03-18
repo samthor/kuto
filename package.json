@@ -1,17 +1,18 @@
 {
   "type": "module",
-  "scripts": {
-    "test": "tsx test/"
-  },
   "author": "Sam Thorogood <sam.thorogood@gmail.com>",
   "license": "Apache-2.0",
-  "dependencies": {
-    "acorn": "^8.11.3"
-  },
   "devDependencies": {
     "@types/node": "^20.11.28",
+    "acorn": "^8.11.3",
     "esbuild": "^0.20.2",
     "tsx": "^4.7.1"
+  },
+  "scripts": {
+    "prepublishOnly": "release.sh"
+  },
+  "bin": {
+    "kuto": "./dist/app.js"
   },
   "name": "kuto",
   "version": "0.1.0"

@@ -21,7 +21,7 @@ export function liftDefault(e: StaticExtractor, minSize: number) {
     }
   }
 
-  // lift expressions in a few places (all top-level though)
+  // lift expressions in a few places (all top-level though?)
   const maybeLift = (expr: acorn.Expression | null | undefined, ok: () => void) => {
     if (!expr) {
       return;

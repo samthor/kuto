@@ -149,7 +149,7 @@ export class StaticExtractor {
    * Finds and returns a new valid variable name for the static file.
    */
   private varForStatic(staticName: string, prefix: string) {
-    for (let i = 1; i < 10_000; ++i) {
+    for (let i = 1; i < 100_000; ++i) {
       const cand = `${prefix}${i.toString(36)}`;
       const check = `${cand}~${staticName}`;
       if (!this.staticVars.has(check)) {

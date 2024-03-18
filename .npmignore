@@ -1,0 +1,8 @@
+demo/
+dist/raw/
+dist/split/
+lib/
+test/
+*.sh
+*.js
+*.ts
