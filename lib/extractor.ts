@@ -265,12 +265,8 @@ export class StaticExtractor {
     }));
     if (args.decl) {
       if (find.immediateAccess) {
-        if (code.startsWith('{')) {
-          // acorn 'eats' the extra () before it returns, so nothing is needed on the other side
-          code = `const ${name} = () => (${code});`;
-        } else {
-          code = `const ${name} = () => ${code};`;
-        }
+        // acorn 'eats' the extra () before it returns, so nothing is needed on the other side
+        code = `const ${name} = () => (${code});`;
       } else {
         // can evaluate immediately
         code = `const ${name} = ${code};`;

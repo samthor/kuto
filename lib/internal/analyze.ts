@@ -469,26 +469,23 @@ export function analyzeBlock(b: acorn.BlockStatement): AnalyzeBlock {
       case 'NewExpression':
       case 'CallExpression':
         e.arguments.forEach((arg) => processExpression(arg));
-
         if (
-          e.callee.type === 'ArrowFunctionExpression' ||
-          (e.callee.type === 'FunctionExpression' && !e.callee.id)
+          !(e.callee.type === 'ArrowFunctionExpression' || e.callee.type === 'FunctionExpression')
         ) {
-          // this is an IIFE, 'run' immediately
-          const block = reductifyFunction(e.callee);
-          const inner = analyzeBlock(block);
-          for (const [key, info] of inner.vars) {
-            if (info.kind) {
-              continue;
-            }
-            const vi = markIdentifier(key, info.written);
-            vi.nestedWrite ||= info.nestedWrite;
-          }
-        } else {
-          // normal function - can be called whenever
           processExpression(e.callee);
+          break;
         }
 
+        // this is an IIFE, 'run' immediately
+        const block = reductifyFunction(e.callee);
+        const inner = analyzeBlock(block);
+        for (const [key, info] of inner.vars) {
+          if (info.kind) {
+            continue;
+          }
+          const vi = markIdentifier(key, info.written);
+          vi.nestedWrite ||= info.nestedWrite;
+        }
         break;
 
       case 'TemplateLiteral':

@@ -11,4 +11,4 @@ npx tsx ../../app.ts ../../test/data/simple.js dist/
 
 # TODO: check not same bytes
 
-node dist/test.js
+node dist/simple.js
