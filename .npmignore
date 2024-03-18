@@ -4,5 +4,6 @@ dist/split/
 lib/
 test/
 *.sh
-*.js
-*.ts
+/*.ts
+.*
+tsconfig.json
