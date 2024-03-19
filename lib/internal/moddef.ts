@@ -54,6 +54,18 @@ export class ModDef {
     }
   }
 
+  *importSources(): Generator<{ name: string; info: SourceInfo }, void, void> {
+    for (const [name, info] of this.bySource) {
+      yield { name, info };
+    }
+  }
+
+  *importByName(): Generator<{ name: string; info: ImportInfo }, void, void> {
+    for (const [name, info] of this.byLocalName) {
+      yield { name, info };
+    }
+  }
+
   *exported(): Generator<{ exportedName: string; import?: string; name: string }, void, void> {
     for (const [exportedName, info] of this._exports) {
       yield { exportedName, ...info };

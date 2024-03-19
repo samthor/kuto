@@ -1,17 +1,11 @@
 import type * as acorn from 'acorn';
-import { analyzeBlock, createBlock, createExpressionStatement } from './internal/analyze.ts';
-
-export type AnalyzeFunction = {
-  /**
-   * What refs the function uses externally, and whether the access is read-only (`false`) or read-write (`true`).
-   */
-  external: Map<string, boolean>;
-};
+import { createBlock, createExpressionStatement } from './internal/analyze/helper.ts';
+import { AnalyzeBlock, analyzeBlock } from './internal/analyze/block.ts';
 
 /**
  * Given a function, determine what it uses from outside the function.
  */
-export function analyzeFunction(f: acorn.Function): AnalyzeFunction {
+export function analyzeFunction(f: acorn.Function): AnalyzeBlock {
   let expr: acorn.FunctionExpression | acorn.ArrowFunctionExpression;
 
   if (!f.expression) {
@@ -26,14 +20,11 @@ export function analyzeFunction(f: acorn.Function): AnalyzeFunction {
   const b = createBlock(createExpressionStatement(expr));
   const internal = analyzeBlock(b);
 
-  const out: AnalyzeFunction = { external: new Map() };
-
   for (const [key, info] of internal.vars) {
-    if (info.kind) {
-      continue;
+    if (info.local?.kind) {
+      internal.vars.delete(key);
     }
-    out.external.set(key, info.written || info.nestedWrite);
   }
 
-  return out;
+  return internal;
 }

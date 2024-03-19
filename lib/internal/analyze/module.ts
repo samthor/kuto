@@ -1,6 +1,6 @@
 import type * as acorn from 'acorn';
-import { processPattern } from './analyze.ts';
-import { ModDef } from './moddef.ts';
+import { ModDef } from '../moddef.ts';
+import { processPattern } from './helper.ts';
 
 export type AggregateImports = {
   mod: ModDef;

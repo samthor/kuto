@@ -1,10 +1,11 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as acorn from 'acorn';
-import { aggregateImports } from '../lib/internal/module.ts';
-import { VarInfo, analyzeBlock, createBlock } from '../lib/internal/analyze.ts';
+import { aggregateImports } from '../lib/internal/analyze/module.ts';
+import { VarInfo, analyzeBlock } from '../lib/internal/analyze/block.ts';
 import { findVars, resolveConst } from '../lib/interpret.ts';
 import { relativize } from '../lib/helper.ts';
+import { createBlock } from '../lib/internal/analyze/helper.ts';
 
 export type InfoArgs = {
   path: string;
@@ -35,23 +36,48 @@ export default async function cmdInfo(args: InfoArgs) {
   resolveConst(agg, analysis);
 
   const toplevelVars = new Map<string, VarInfo>();
+  const nestedVars = new Map<string, VarInfo>();
   for (const [cand, info] of analysis.vars) {
-    if (info.local) {
-      toplevelVars.set(cand, info);
-    }
+    info.local && toplevelVars.set(cand, info);
+    info.nested && nestedVars.set(cand, info);
   }
   const toplevelFind = findVars({ find: toplevelVars, vars: analysis.vars, mod: agg.mod });
+  const nestedFind = findVars({ find: nestedVars, vars: analysis.vars, mod: agg.mod });
 
   console.info('#', JSON.stringify(relativize(args.path)));
 
+  console.info({ toplevelFind, nestedFind });
+  const sideEffects = toplevelFind.immediateAccess;
+  console.info('\nSide-effects:', sideEffects ? 'Unknown' : 'No!');
+
+  console.info('\nImports:');
+  for (const { name, info } of agg.mod.importSources()) {
+    console.info(`- ${JSON.stringify(name)}`);
+    info.imports.forEach((names, remote) => {
+      for (const name of names) {
+        const left = name === remote ? name : `${remote} as ${name}`;
+        console.info(`  - ${left}`);
+      }
+    });
+  }
+
   console.info('\nExports:');
+  for (const { name, info } of agg.mod.importSources()) {
+    if (info.reexportAll) {
+      console.info(`- * from ${JSON.stringify(name)}`);
+    }
+  }
   for (const e of agg.mod.exported()) {
-    const left = e.exportedName === e.name ? e.name : `${e.exportedName}: ${e.name}`;
+    const left = e.exportedName === e.name ? e.name : `${e.name} as ${e.exportedName}`;
     let suffix = '';
-    if (e.import) {
-      suffix = ` (from ${JSON.stringify(e.import)})`;
+
+    const lookup = agg.mod.lookupImport(e.name);
+    if (lookup) {
+      suffix = ` (via ${JSON.stringify(lookup.import)})`;
+    } else if (e.import) {
+      suffix = ` (reexport from ${JSON.stringify(e.import)})`;
     } else if (!agg.localConst.has(e.name)) {
-      suffix = ` (mutable, needs bind)`;
+      suffix = ` (mutable, may change)`;
     }
     console.info(`- ${left}${suffix}`);
   }
@@ -61,7 +87,8 @@ export default async function cmdInfo(args: InfoArgs) {
     console.info(`- ${g}${rw ? ' (written)' : ''}`);
   }
 
-  // for (const [v, info] of analysis.vars) {
-  //   console.info(v, '=>', info);
-  // }
+  console.info('\nGlobals used in callables:');
+  for (const [g, rw] of nestedFind.globals) {
+    console.info(`- ${g}${rw ? ' (written)' : ''}`);
+  }
 }

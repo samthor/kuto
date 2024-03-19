@@ -1,15 +1,11 @@
 import * as acorn from 'acorn';
-import { AggregateImports, aggregateImports } from './internal/module.ts';
-import {
-  VarInfo,
-  analyzeBlock,
-  createBlock,
-  createExpressionStatement,
-} from './internal/analyze.ts';
 import { analyzeFunction } from './analyze.ts';
 import { withDefault } from './helper.ts';
 import { ModDef } from './internal/moddef.ts';
 import { findVars, resolveConst } from './interpret.ts';
+import { VarInfo, analyzeBlock } from './internal/analyze/block.ts';
+import { AggregateImports, aggregateImports } from './internal/analyze/module.ts';
+import { createBlock, createExpressionStatement } from './internal/analyze/helper.ts';
 
 const normalStaticPrefix = '_';
 const callableStaticPrefix = '$';
@@ -20,8 +16,6 @@ export type ExtractStaticArgs = {
   staticName: string;
   existingStaticSource: Map<string, string>;
 };
-
-type FindType = Map<string, boolean | VarInfo>;
 
 function extractExistingStaticCode(raw: Iterable<[string, string]>) {
   const existingByCode: Map<string, { name: string; import: string }> = new Map();
@@ -155,11 +149,7 @@ export class StaticExtractor {
       if (!this.vars.has(cand)) {
         // pretend to be global
         this.vars.set(cand, {
-          nestedWrite: false,
-          simple: false,
-          written: false,
-          local: true,
-          kind: undefined,
+          local: { writes: 0, kind: 'var' },
         });
         return cand;
       }
@@ -167,12 +157,8 @@ export class StaticExtractor {
     throw new Error(`could not make var for main`);
   }
 
-  private findVars(find: FindType) {
-    return findVars({ find, vars: this.vars, mod: this.agg.mod });
-  }
-
-  private addCodeToStatic(args: { node: acorn.Node; find: FindType; decl?: boolean }) {
-    const find = this.findVars(args.find);
+  private addCodeToStatic(args: { node: acorn.Node; find: Map<string, VarInfo>; decl?: boolean }) {
+    const find = findVars({ find: args.find, vars: this.vars, mod: this.agg.mod });
     if (find.rw) {
       return null; // no support for rw
     }
@@ -266,12 +252,12 @@ export class StaticExtractor {
 
   liftFunctionDeclaration(fn: acorn.FunctionDeclaration) {
     const vi = this.vars.get(fn.id.name);
-    if (vi === undefined || !vi.simple) {
+    if (!vi?.local || vi.local.writes !== 1 || vi.nested?.writes) {
       return null;
     }
 
-    const { external } = analyzeFunction(fn);
-    return this.addCodeToStatic({ node: fn, find: external });
+    const { vars } = analyzeFunction(fn);
+    return this.addCodeToStatic({ node: fn, find: vars });
   }
 
   liftExpression(e: acorn.Expression) {

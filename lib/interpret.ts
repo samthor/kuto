@@ -1,8 +1,6 @@
-import type { AnalyzeBlock, VarInfo } from './internal/analyze.ts';
+import { AnalyzeBlock, VarInfo } from './internal/analyze/block.ts';
+import { AggregateImports } from './internal/analyze/module.ts';
 import { ImportInfo, ModDef } from './internal/moddef.ts';
-import type { AggregateImports } from './internal/module.ts';
-
-type FindType = Map<string, boolean | VarInfo>;
 
 export function resolveConst(agg: AggregateImports, analysis: AnalyzeBlock) {
   // resolve whether local vars are const - look for writes inside later callables
@@ -17,7 +15,8 @@ export function resolveConst(agg: AggregateImports, analysis: AnalyzeBlock) {
     if (!v) {
       throw new Error(`local exported var ${JSON.stringify(name)} is missing`);
     }
-    if (!v.nestedWrite) {
+    if (!v.nested?.writes) {
+      // it may be written _many_ times locally but never nested, const by end of file
       agg.localConst.add(name);
     }
   }
@@ -26,7 +25,7 @@ export function resolveConst(agg: AggregateImports, analysis: AnalyzeBlock) {
 }
 
 type FindVarsArgs = {
-  find: Map<string, boolean | VarInfo>;
+  find: Map<string, VarInfo>;
   vars: Map<string, VarInfo>;
   mod: ModDef;
 };
@@ -39,32 +38,21 @@ export function findVars({ find, vars, mod }: FindVarsArgs) {
   let immediateAccess = false;
 
   for (const [key, check] of find) {
-    let rw: boolean;
-    if (typeof check === 'object') {
-      rw = check.written || check.nestedWrite;
-      immediateAccess ||= check.local;
-    } else {
-      rw = check;
-    }
+    const rw = Boolean(check.local?.writes || check.nested?.writes);
+    anyRw ||= rw;
+    immediateAccess ||= Boolean(check.local);
 
     const vi = vars.get(key)!;
-    if (!vi.kind) {
+    if (!vi.local?.kind) {
       const importInfo = mod.lookupImport(key);
       if (importInfo) {
         imports.set(key, importInfo);
         continue;
       }
-
       globals.set(key, rw);
-      if (typeof check === 'object' && check.local) {
-        // used global outside function, could be anything - can't allow
-        immediateAccess = true;
-      }
-      continue;
+    } else {
+      locals.set(key, rw);
     }
-
-    anyRw ||= rw;
-    locals.set(key, rw);
   }
 
   return { globals, imports, locals, rw: anyRw, immediateAccess };
