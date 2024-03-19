@@ -54,6 +54,12 @@ export class ModDef {
     }
   }
 
+  *exported(): Generator<{ exportedName: string; import?: string; name: string }, void, void> {
+    for (const [exportedName, info] of this._exports) {
+      yield { exportedName, ...info };
+    }
+  }
+
   lookupImport(name: string): ImportInfo | undefined {
     const o = this.byLocalName.get(name);
     return o ? { ...o } : undefined;
