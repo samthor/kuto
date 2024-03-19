@@ -2,7 +2,8 @@
 
 set -eu
 
-esbuild --bundle --format=esm --outfile=dist/raw/app.js --platform=node app.ts
+esbuild --bundle --format=esm --outfile=dist/raw/app.js --platform=node --external:esbuild \
+    app.ts
 node dist/raw/app.js dist/raw/app.js dist/split/
 
 rm dist/*.js &2>/dev/null || true
