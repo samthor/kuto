@@ -99,8 +99,9 @@ export function processPattern(p: acorn.Pattern) {
         if (p.object.type !== 'Super') {
           expr.push(p.object);
         }
-        if (p.property.type !== 'PrivateIdentifier') {
+        if (p.computed && p.property.type !== 'PrivateIdentifier') {
           expr.push(p.property);
+          // don't push Identifier, this makes us get "foo.bar.zing" all together
         }
         continue;
     }
