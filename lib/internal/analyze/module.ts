@@ -101,10 +101,20 @@ export function aggregateImports(p: acorn.Program): AggregateImports {
         break;
       }
 
-      case 'ExportAllDeclaration':
+      case 'ExportAllDeclaration': {
+        const importSource = node.source.value as string;
+
         // this is a re-export of all
-        out.mod.markExportAllFrom(node.source.value as string);
+        if (!node.exported) {
+          // ...without a name, e.g. "export * from '...'"
+          // kuto can't handle this
+          out.mod.markExportAllFrom(importSource);
+        } else {
+          // with a name
+          out.mod.addExportFrom(importSource, nodeToString(node.exported), '');
+        }
         continue;
+      }
 
       case 'ExportNamedDeclaration':
         if (!node.declaration) {

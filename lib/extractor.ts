@@ -110,6 +110,14 @@ export class StaticExtractor {
     this.agg = agg;
     this.vars = analysis.vars;
 
+    // we can't operate with this reexport _because_ we might shadow things
+    // you can still `export * as x from ...`
+    const hasExportAllFrom = this.agg.mod.hasExportAllFrom();
+    if (hasExportAllFrom) {
+      const inner = `export * from ${JSON.stringify(hasExportAllFrom)};`;
+      throw new Error(`Kuto cannot split files that include \`${inner}\``);
+    }
+
     // create fake name for hole
     if (this.agg.exportDefaultHole) {
       this.exportDefaultName = this.varForMain();

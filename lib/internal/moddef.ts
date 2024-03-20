@@ -18,6 +18,10 @@ type SourceInfo = {
 };
 
 function safeImportAs(from: string, to: string = from) {
+  if (!from || !to) {
+    throw new Error(`cannot safeImportAs: from=${from} to=${to}`);
+  }
+
   // TODO: make actually safe
   if (from === to) {
     return from;
@@ -148,6 +152,14 @@ export class ModDef {
     info.reexportAll = true;
   }
 
+  hasExportAllFrom() {
+    for (const [name, info] of this.bySource.entries()) {
+      if (info.reexportAll) {
+        return name;
+      }
+    }
+  }
+
   addExportLocal(exportedName: string, sourceName: string = exportedName) {
     const prev = this._exports.get(exportedName);
     if (prev) {
@@ -206,7 +218,12 @@ export class ModDef {
       const reexportParts: string[] = [];
       for (const [remote, exported] of info.exports) {
         for (const e of exported) {
-          reexportParts.push(safeImportAs(remote, e));
+          if (remote !== '') {
+            reexportParts.push(safeImportAs(remote, e));
+            continue;
+          }
+          lines.push(`export * as ${e} from ${pj}`);
+          any = true;
         }
       }
       if (reexportParts.length) {
