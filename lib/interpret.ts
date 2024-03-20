@@ -11,12 +11,10 @@ export function resolveConst(agg: AggregateImports, analysis: AnalyzeBlock) {
       continue;
     }
 
-    const v = analysis.vars.get(name)!;
-    if (!v) {
-      throw new Error(`local exported var ${JSON.stringify(name)} is missing`);
-    }
-    if (!v.nested?.writes) {
-      // it may be written _many_ times locally but never nested, const by end of file
+    const v = analysis.vars.get(name);
+    if (v?.local && !v.nested?.writes) {
+      // only update _if actually local_
+      // just check it's not written nested (read is fine)
       agg.localConst.add(name);
     }
   }

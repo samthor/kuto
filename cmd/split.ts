@@ -3,6 +3,7 @@ import * as path from 'node:path';
 import { StaticExtractor } from '../lib/extractor.ts';
 import { liftDefault } from '../lib/lift.ts';
 import { loadExisting } from '../lib/bin.ts';
+import { loadAndMaybeTransform } from '../lib/load.ts';
 
 export type SpiltArgs = {
   min: number;
@@ -14,7 +15,6 @@ export type SpiltArgs = {
 export default async function cmdSplit(args: SpiltArgs) {
   const { sourcePath, dist } = args;
 
-  const source = fs.readFileSync(sourcePath, 'utf-8');
   fs.mkdirSync(dist, { recursive: true });
 
   const now = +new Date();
@@ -25,7 +25,10 @@ export default async function cmdSplit(args: SpiltArgs) {
 
   const existing = loadExisting(args);
 
+  const { p, source } = await loadAndMaybeTransform(args.sourcePath);
+
   const e = new StaticExtractor({
+    p,
     source,
     sourceName,
     staticName,

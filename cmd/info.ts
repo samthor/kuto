@@ -1,34 +1,16 @@
-import * as fs from 'node:fs';
-import * as path from 'node:path';
-import * as acorn from 'acorn';
 import { aggregateImports } from '../lib/internal/analyze/module.ts';
 import { VarInfo, analyzeBlock } from '../lib/internal/analyze/block.ts';
 import { findVars, resolveConst } from '../lib/interpret.ts';
 import { relativize } from '../lib/helper.ts';
 import { createBlock } from '../lib/internal/analyze/helper.ts';
+import { loadAndMaybeTransform } from '../lib/load.ts';
 
 export type InfoArgs = {
   path: string;
 };
 
-const needsBuildExt = (ext: string) => ['.ts', '.tsx', '.jsx'].includes(ext);
-
 export default async function cmdInfo(args: InfoArgs) {
-  const { ext } = path.parse(args.path);
-  let source = fs.readFileSync(args.path, 'utf-8');
-
-  // lazily compile with esbuild (throws if not available)
-  if (needsBuildExt(ext)) {
-    const esbuild = await import('esbuild');
-    const t = esbuild.transformSync(source, {
-      loader: ext.endsWith('x') ? 'tsx' : 'ts',
-      format: 'esm',
-      platform: 'neutral',
-    });
-    source = t.code;
-  }
-
-  const p = acorn.parse(source, { ecmaVersion: 'latest', sourceType: 'module' });
+  const { p } = await loadAndMaybeTransform(args.path);
 
   const agg = aggregateImports(p);
   const block = createBlock(...agg.rest);
@@ -46,7 +28,6 @@ export default async function cmdInfo(args: InfoArgs) {
 
   console.info('#', JSON.stringify(relativize(args.path)));
 
-  console.info({ toplevelFind, nestedFind });
   const sideEffects = toplevelFind.immediateAccess;
   console.info('\nSide-effects:', sideEffects ? 'Unknown' : 'No!');
 
@@ -55,7 +36,7 @@ export default async function cmdInfo(args: InfoArgs) {
     console.info(`- ${JSON.stringify(name)}`);
     info.imports.forEach((names, remote) => {
       for (const name of names) {
-        const left = name === remote ? name : `${remote} as ${name}`;
+        const left = name === remote ? name : `${remote || '*'} as ${name}`;
         console.info(`  - ${left}`);
       }
     });
@@ -73,9 +54,9 @@ export default async function cmdInfo(args: InfoArgs) {
 
     const lookup = agg.mod.lookupImport(e.name);
     if (lookup) {
-      suffix = ` (via ${JSON.stringify(lookup.import)})`;
+      suffix = ` from ${JSON.stringify(lookup.import)}`;
     } else if (e.import) {
-      suffix = ` (reexport from ${JSON.stringify(e.import)})`;
+      suffix = ` from ${JSON.stringify(e.import)} (re-export)`;
     } else if (!agg.localConst.has(e.name)) {
       suffix = ` (mutable, may change)`;
     }

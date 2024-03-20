@@ -12,6 +12,7 @@ const callableStaticPrefix = '$';
 
 export type ExtractStaticArgs = {
   source: string;
+  p: acorn.Program;
   sourceName: string;
   staticName: string;
   existingStaticSource: Map<string, string>;
@@ -97,11 +98,8 @@ export class StaticExtractor {
       this.staticVars.add(`${info.name}~${info.import}`);
     }
 
-    // parse original source
-    const p = acorn.parse(args.source, { ecmaVersion: 'latest', sourceType: 'module' });
-
     // analyze parsed
-    const agg = aggregateImports(p);
+    const agg = aggregateImports(args.p);
     this._block = createBlock(...agg.rest);
     const analysis = analyzeBlock(this._block);
     this.agg = agg;
