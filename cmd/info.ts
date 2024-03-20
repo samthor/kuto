@@ -49,7 +49,7 @@ export default async function cmdInfo(args: InfoArgs) {
     }
   }
   for (const e of agg.mod.exported()) {
-    const left = e.exportedName === e.name ? e.name : `${e.name} as ${e.exportedName}`;
+    const left = e.exportedName === e.name ? e.name : `${e.name || '*'} as ${e.exportedName}`;
     let suffix = '';
 
     const lookup = agg.mod.lookupImport(e.name);
