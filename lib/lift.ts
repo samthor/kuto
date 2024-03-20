@@ -14,9 +14,9 @@ export function liftDefault(e: StaticExtractor, minSize: number) {
     const size = part.end - part.start;
     if (part.type === 'FunctionDeclaration' && size >= minSize) {
       if (e.liftFunctionDeclaration(part)) {
-        stats.fn++;
+        ++stats.fn;
       } else {
-        stats._skip++;
+        ++stats._skip;
       }
     }
   }
@@ -33,7 +33,7 @@ export function liftDefault(e: StaticExtractor, minSize: number) {
     if (e.liftExpression(expr)) {
       ok();
     } else {
-      stats._skip++;
+      ++stats._skip;
     }
   };
   for (const part of e.block.body) {
