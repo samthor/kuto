@@ -20,5 +20,6 @@ export async function loadAndMaybeTransform(name: string) {
   }
 
   const p = acorn.parse(source, { ecmaVersion: 'latest', sourceType: 'module' });
+
   return { p, name, source };
 }

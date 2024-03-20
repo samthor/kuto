@@ -1,6 +1,6 @@
 import * as acorn from 'acorn';
 import { analyzeFunction } from './analyze.ts';
-import { withDefault } from './helper.ts';
+import { renderOnly, renderSkip, withDefault } from './helper.ts';
 import { ModDef } from './internal/moddef.ts';
 import { findVars, resolveConst } from './interpret.ts';
 import { VarInfo, analyzeBlock } from './internal/analyze/block.ts';
@@ -76,6 +76,11 @@ export class StaticExtractor {
   private existingByCode: Map<string, { name: string; import: string; here?: boolean }>;
   private _block: acorn.BlockStatement;
 
+  /**
+   * Needed in cases where a decl/expression is exported as default without a name.
+   */
+  private exportDefaultName?: string;
+
   private staticToWrite = new Map<
     string,
     {
@@ -105,15 +110,11 @@ export class StaticExtractor {
     this.agg = agg;
     this.vars = analysis.vars;
 
-    // TODO: detect 'default' function or class decl without other name: currently broken
-    for (const p of this._block.body) {
-      switch (p.type) {
-        case 'ClassDeclaration':
-        case 'FunctionDeclaration':
-          if (p.id.name === 'default') {
-            throw new Error(`TODO: can't operate on default function/class`);
-          }
-      }
+    // create fake name for hole
+    if (this.agg.exportDefaultHole) {
+      this.exportDefaultName = this.varForMain();
+      this.agg.mod.removeExportLocal('default');
+      this.agg.mod.addExportLocal('default', this.exportDefaultName);
     }
 
     // resolve whether local vars are const - look for writes inside later callables
@@ -283,27 +284,29 @@ export class StaticExtractor {
     }
 
     // render main
-    const nodesToReplace: [{ start: number; end: number }, string][] = [...this.nodesToReplace];
-    nodesToReplace.push(
-      ...this.agg.moduleNodes.map((node) => {
-        return [node, ''] as [acorn.Node, string];
-      }),
+
+    const { out: sourceWithoutModules, holes: skipHoles } = renderOnly(
+      this.args.source,
+      this.agg.rest,
     );
-    let outMain = renderSkip(this.args.source, nodesToReplace);
+    const skip: { start: number; end: number; replace?: string }[] = [
+      skipHoles,
+      [...this.nodesToReplace.entries()].map(([node, replace]) => {
+        return { ...node, replace };
+      }),
+    ].flat();
+
+    if (this.agg.exportDefaultHole) {
+      const h = this.agg.exportDefaultHole;
+
+      // by definition we can't reference ourselves, so this var is 'pointless'
+      skip.push({ ...h, replace: `const ${this.exportDefaultName} = ` });
+      skip.push({ start: h.after, end: h.after, replace: ';' });
+    }
+
+    let outMain = renderSkip(sourceWithoutModules, skip);
     outMain += this.agg.mod.renderSource();
 
     return { main: outMain, static: outStatic };
   }
-}
-
-function renderSkip(raw: string, skip: Iterable<[{ start: number; end: number }, string]>): string {
-  const replaces = [...skip];
-  replaces.sort(([{ start: a }], [{ start: b }]) => a - b);
-
-  let out = raw.substring(0, replaces.at(0)?.[0].start);
-  for (let i = 0; i < replaces.length; ++i) {
-    out += replaces[i][1];
-    out += raw.substring(replaces[i][0].end, replaces.at(i + 1)?.[0].start);
-  }
-  return out;
 }

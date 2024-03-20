@@ -1,12 +1,12 @@
 import type * as acorn from 'acorn';
 import { ModDef } from '../moddef.ts';
-import { processPattern } from './helper.ts';
+import { createExpressionStatement, processPattern } from './helper.ts';
 
 export type AggregateImports = {
   mod: ModDef;
   localConst: Set<string>;
   rest: acorn.Statement[];
-  moduleNodes: acorn.Node[];
+  exportDefaultHole?: { start: number; end: number; after: number };
 };
 
 const fakeDefaultIdentifier: acorn.Identifier = Object.freeze({
@@ -59,7 +59,6 @@ export function aggregateImports(p: acorn.Program): AggregateImports {
     mod: new ModDef(),
     localConst: new Set(),
     rest: [],
-    moduleNodes: [],
   };
 
   // early pass: ordering + record module parts
@@ -74,15 +73,7 @@ export function aggregateImports(p: acorn.Program): AggregateImports {
           out.mod.addSource(importSource);
         }
         break;
-
-      case 'ExportDefaultDeclaration':
-        break;
-
-      default:
-        continue;
     }
-
-    out.moduleNodes.push(node);
   }
 
   // main pass
@@ -167,9 +158,19 @@ export function aggregateImports(p: acorn.Program): AggregateImports {
             throw new Error(`TS confused`);
 
           default: // default is an expr, so evaluated immediately: always const
+            if (!isDefault) {
+              throw new Error(`default but not default?`);
+            }
             out.mod.addExportLocal('default', 'default');
             out.localConst.add('default');
-            out.rest.push(buildFakeDefaultConst(d));
+            out.exportDefaultHole = { start: node.start, end: d.start, after: d.end };
+            // don't use helper, it doesn't include start/end properly
+            out.rest.push({
+              type: 'ExpressionStatement',
+              start: d.start,
+              end: d.end,
+              expression: d,
+            });
             continue;
         }
 
@@ -183,6 +184,7 @@ export function aggregateImports(p: acorn.Program): AggregateImports {
           // can't reassign unnamed declaration
           out.mod.addExportLocal('default', 'default');
           out.localConst.add('default');
+          out.exportDefaultHole = { start: node.start, end: d.start, after: d.end };
         } else {
           throw new Error(`unnamed declaration`);
         }
