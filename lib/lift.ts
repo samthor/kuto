@@ -21,6 +21,10 @@ export function liftDefault(e: StaticExtractor, minSize: number) {
     }
   }
 
+  // TODO: lift top-level class blocks
+  // TODO: esbuild (and friends?) _already_ transform these to `const ClassName = class { ... }`,
+  // so in already bundled code you don't actually see this. So it's important but less immediate.
+
   // lift expressions in a few places (all top-level though?)
   const maybeLift = (expr: acorn.Expression | null | undefined, ok: () => void) => {
     if (!expr) {
