@@ -71,7 +71,8 @@ export const run = (argv = process.argv.slice(2)): any => {
     for (const [f, config] of Object.entries(flags)) {
       const help = (config as any)['help'] ?? '?';
       const defaultPart = 'default' in config ? ` (default ${config.default})` : '';
-      console.warn(`  --${f}${defaultPart}: ${help}`);
+      const shortPart = config.short ? `-${config.short}, ` : '';
+      console.warn(`  ${shortPart}--${f}${defaultPart}: ${help}`);
     }
   }
   console.warn('\nmore info: https://kuto.dev');
