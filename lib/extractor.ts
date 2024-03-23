@@ -206,7 +206,7 @@ export class StaticExtractor {
     }));
     if (find.immediateAccess) {
       // acorn 'eats' the extra () before it returns, so nothing is needed on the other side
-      code = `() => (${code});`;
+      code = `() => (${code})`;
     }
 
     // don't push code again if we have effectively the same

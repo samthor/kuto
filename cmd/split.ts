@@ -43,8 +43,12 @@ export default async function cmdSplit(args: SpiltArgs) {
   // generate stats, show most recent first
   const sizes: Record<string, number> = {};
   sizes[sourceName] = out.main.length;
+  let totalSize = out.main.length;
   const statics = [...out.static].sort(([a], [b]) => b.localeCompare(a));
-  statics.forEach(([name, code]) => (sizes[name] = code.length));
+  statics.forEach(([name, code]) => {
+    sizes[name] = code.length;
+    totalSize += code.length;
+  });
 
   console.info('stats', {
     source: { size: source.length },
@@ -52,6 +56,7 @@ export default async function cmdSplit(args: SpiltArgs) {
     remove: toRemove,
     lift: liftStats,
   });
+  console.info('total overhead bytes:', (((totalSize / source.length) - 1.0) * 100).toFixed(3) + '%');
 
   // write new files, nuke old ones
   for (const e of toRemove) {
