@@ -1,7 +1,8 @@
 <img src="https://storage.googleapis.com/hwhistlr.appspot.com/og/kuto.jpeg" width="200" height="105" alt="Kuto tool logo" />
 
-Kuto makes updating your site's JS better, faster, harder, stronger.
-Read more [on the blog](https://samthor.au/2024/kuto/)!
+🌈 Kuto makes updating your site's JS better, faster, harder, stronger.
+It reduces your download size by re-using code you've already shipped.
+Read more [on the blog](https://samthor.au/2024/kuto/)! 🌈
 
 It does this by splitting JS files (in ESM) into 'main' and static parts.
 The static parts can be cached by clients forever, as they have no side-effects, and can be used as a 'corpus' or dictionary of code that can be called later.
