@@ -115,7 +115,7 @@ export class StaticExtractor {
     const hasExportAllFrom = this.agg.mod.hasExportAllFrom();
     if (hasExportAllFrom) {
       const inner = `export * from ${JSON.stringify(hasExportAllFrom)};`;
-      throw new Error(`Kuto cannot split files that include \`${inner}\``);
+      throw new Error(`Kuto cannot split files that re-export in the top scope, e.g.: \`${inner}\``);
     }
 
     // create fake name for hole
@@ -164,12 +164,12 @@ export class StaticExtractor {
     throw new Error(`could not make var for main`);
   }
 
-  private addCodeToStatic(args: { node: acorn.Node; find: Map<string, VarInfo>; decl?: boolean }) {
+  private addCodeToStatic(args: { node: acorn.Node; find: Map<string, VarInfo>; var?: boolean }) {
     const find = findVars({ find: args.find, vars: this.vars, mod: this.agg.mod });
     if (find.rw) {
       return null; // no support for rw
     }
-    if (!args.decl && find.immediateAccess) {
+    if (!args.var && find.immediateAccess) {
       // TODO: wrong for class defs
       throw new Error(`top-level fn should not have immediateAccess`);
     }
@@ -185,17 +185,11 @@ export class StaticExtractor {
 
     // determine what name this has (generated or part of the fn/class hoisted)
     if (!name) {
-      if (args.decl) {
-        name = this.varForStatic(
-          targetStaticName,
-          find.immediateAccess ? callableStaticPrefix : normalStaticPrefix,
-        );
-      } else if ('id' in args.node) {
-        const id = args.node.id as acorn.Identifier;
-        if (id.type === 'Identifier') {
-          name = id.name;
-        }
-      }
+      name = this.varForStatic(
+        targetStaticName,
+        find.immediateAccess ? callableStaticPrefix : normalStaticPrefix,
+      );
+      console.info('generating static name', name);
     }
     if (!name || name === 'default') {
       throw new Error(`could not name code put into static: ${args}`);
@@ -211,14 +205,12 @@ export class StaticExtractor {
       body: [],
       here: new Set<string>(),
     }));
-    if (args.decl) {
-      if (find.immediateAccess) {
-        // acorn 'eats' the extra () before it returns, so nothing is needed on the other side
-        code = `const ${name} = () => (${code});`;
-      } else {
-        // can evaluate immediately
-        code = `const ${name} = ${code};`;
-      }
+    if (find.immediateAccess) {
+      // acorn 'eats' the extra () before it returns, so nothing is needed on the other side
+      code = `const ${name} = () => (${code});`;
+    } else {
+      // can evaluate immediately
+      code = `const ${name} = ${code};`;
     }
 
     // don't push code again if we have effectively the same
@@ -229,14 +221,19 @@ export class StaticExtractor {
 
     // export from static back to main, replacing previous version of whatever
     targetStatic.mod.addExportLocal(name);
-    if (args.decl) {
+    if (args.var) {
       // TODO: referencing a global import isn't nessecarily smaller
-      const replacedCode =
+      let replacedCode =
         `${targetStatic.globalInMain}.${name}` + (find.immediateAccess ? '()' : '');
       this.nodesToReplace.set(args.node, replacedCode);
       this.agg.mod.addGlobalImport(targetStaticName, targetStatic.globalInMain);
     } else {
-      this.nodesToReplace.set(args.node, ''); // clear, fn appears via import
+      const decl = args.node as acorn.ClassDeclaration | acorn.FunctionDeclaration;
+      if (!(decl.type === 'ClassDeclaration' || decl.type === 'FunctionDeclaration')) {
+        throw new Error(`can't hoist decl without name`)
+      }
+      const declName = decl.id.name as string;
+      this.nodesToReplace.set(args.node, `const ${declName} = ${name};`);
       this.agg.mod.addImport(targetStaticName, name);
     }
 
@@ -269,7 +266,7 @@ export class StaticExtractor {
 
   liftExpression(e: acorn.Expression) {
     const { vars } = analyzeBlock(createBlock(createExpressionStatement(e)));
-    return this.addCodeToStatic({ node: e, find: vars, decl: true });
+    return this.addCodeToStatic({ node: e, find: vars, var: true });
   }
 
   build() {

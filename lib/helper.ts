@@ -14,7 +14,7 @@ export function relativize(s: string) {
   try {
     new URL(s);
     return s;
-  } catch (e) {}
+  } catch (e) { }
   return './' + s;
 }
 
