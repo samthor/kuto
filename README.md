@@ -1,3 +1,5 @@
+<img src="https://storage.googleapis.com/hwhistlr.appspot.com/og/kuto.jpeg" width="200" height="105" alt="Kuto tool logo" />
+
 Kuto makes updating your site's JS better, faster, harder, stronger.
 Read more [on the blog](https://samthor.au/2024/kuto/)!
 
