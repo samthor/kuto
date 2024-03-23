@@ -219,11 +219,14 @@ export function processExpression(
       break;
 
     case 'ClassExpression':
+      mark('', { nested: true, writes: 0 });
       processExpression(reductifyClassParts(e), mark);
       break;
 
     case 'FunctionExpression':
     case 'ArrowFunctionExpression': {
+      mark('', { nested: true, writes: 0 });
+
       const block = reductifyFunction(e);
       const inner = analyzeBlock(block);
 

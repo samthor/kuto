@@ -30,6 +30,12 @@ cmd.register('split', {
       short: 'k',
       help: 'always keep this many top-sized static bundle(s)',
     },
+    'dedup-callables': {
+      type: 'boolean',
+      default: false,
+      short: 'd',
+      help: 'dedup callables (may cause inheritance issues)',
+    },
   },
   positional: true,
   usageSuffix: '<source> <outdir/>',
@@ -43,6 +49,7 @@ cmd.register('split', {
       keep: +(res.values['keep'] ?? 0),
       sourcePath: res.positionals[0],
       dist: res.positionals[1],
+      dedupCallables: Boolean(res.values['dedup-callables']),
     });
   },
 });

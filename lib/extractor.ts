@@ -3,7 +3,7 @@ import { analyzeFunction } from './analyze.ts';
 import { renderOnly, renderSkip, withDefault } from './helper.ts';
 import { ModDef } from './internal/moddef.ts';
 import { findVars, resolveConst } from './interpret.ts';
-import { VarInfo, analyzeBlock } from './internal/analyze/block.ts';
+import { AnalyzeBlock, VarInfo, analyzeBlock } from './internal/analyze/block.ts';
 import { AggregateImports, aggregateImports } from './internal/analyze/module.ts';
 import { createBlock, createExpressionStatement } from './internal/analyze/helper.ts';
 
@@ -16,6 +16,7 @@ export type ExtractStaticArgs = {
   sourceName: string;
   staticName: string;
   existingStaticSource: Map<string, string>;
+  dedupCallables: boolean;
 };
 
 function extractExistingStaticCode(raw: Iterable<[string, string]>) {
@@ -115,7 +116,9 @@ export class StaticExtractor {
     const hasExportAllFrom = this.agg.mod.hasExportAllFrom();
     if (hasExportAllFrom) {
       const inner = `export * from ${JSON.stringify(hasExportAllFrom)};`;
-      throw new Error(`Kuto cannot split files that re-export in the top scope, e.g.: \`${inner}\``);
+      throw new Error(
+        `Kuto cannot split files that re-export in the top scope, e.g.: \`${inner}\``,
+      );
     }
 
     // create fake name for hole
@@ -164,8 +167,8 @@ export class StaticExtractor {
     throw new Error(`could not make var for main`);
   }
 
-  private addCodeToStatic(args: { node: acorn.Node; find: Map<string, VarInfo>; var?: boolean }) {
-    const find = findVars({ find: args.find, vars: this.vars, mod: this.agg.mod });
+  private addCodeToStatic(args: { node: acorn.Node; analysis: AnalyzeBlock; var?: boolean }) {
+    const find = findVars({ find: args.analysis.vars, vars: this.vars, mod: this.agg.mod });
     if (find.rw) {
       return null; // no support for rw
     }
@@ -181,6 +184,17 @@ export class StaticExtractor {
     if (existing) {
       targetStaticName = existing.import;
       name = existing.name;
+
+      // if this code _was already shipped_ and it has callables, normally don't include it twice
+      // would cause this problem:
+      //    const a = function() {}
+      //    const b = function() {}
+      //    (new a !== new b)
+      if (existing.here && args.analysis.hasNested) {
+        if (!this.args.dedupCallables) {
+          return null;
+        }
+      }
     }
 
     // determine what name this has (generated or part of the fn/class hoisted)
@@ -195,7 +209,11 @@ export class StaticExtractor {
     }
 
     // future callers may _also_ get this - maybe the source code does the same thing a lot?
-    this.existingByCode.set(code, { name, import: targetStaticName, here: true });
+    if (!existing) {
+      this.existingByCode.set(code, { name, import: targetStaticName, here: true });
+    } else {
+      existing.here = true;
+    }
 
     // add to static file
     const targetStatic = withDefault(this.staticToWrite, targetStaticName, () => ({
@@ -208,11 +226,7 @@ export class StaticExtractor {
       // acorn 'eats' the extra () before it returns, so nothing is needed on the other side
       code = `() => (${code})`;
     }
-
-    // don't push code again if we have effectively the same
-    if (!existing?.here) {
-      targetStatic.exported.set(name, code);
-    }
+    targetStatic.exported.set(name, code);
 
     // update how we reference the now yeeted code from the main file
     if (args.var) {
@@ -224,7 +238,7 @@ export class StaticExtractor {
     } else {
       const decl = args.node as acorn.ClassDeclaration | acorn.FunctionDeclaration;
       if (!(decl.type === 'ClassDeclaration' || decl.type === 'FunctionDeclaration')) {
-        throw new Error(`can't hoist decl without name`)
+        throw new Error(`can't hoist decl without name`);
       }
       this.nodesToReplace.set(args.node, '');
       this.agg.mod.addImport(targetStaticName, decl.id.name, name);
@@ -253,13 +267,13 @@ export class StaticExtractor {
       return null;
     }
 
-    const { vars } = analyzeFunction(fn);
-    return this.addCodeToStatic({ node: fn, find: vars });
+    const analysis = analyzeFunction(fn);
+    return this.addCodeToStatic({ node: fn, analysis });
   }
 
   liftExpression(e: acorn.Expression) {
-    const { vars } = analyzeBlock(createBlock(createExpressionStatement(e)));
-    return this.addCodeToStatic({ node: e, find: vars, var: true });
+    const analysis = analyzeBlock(createBlock(createExpressionStatement(e)));
+    return this.addCodeToStatic({ node: e, analysis, var: true });
   }
 
   build() {
@@ -268,11 +282,13 @@ export class StaticExtractor {
     for (const [targetStaticName, info] of this.staticToWrite) {
       if (!info.exported.size) {
         // otherwise why does this exist??
-        throw new Error(`no vars to export in static file?`)
+        throw new Error(`no vars to export in static file?`);
       }
-      const code = info.mod.renderSource() + `export var ` + [...info.exported.entries()]
-        .map(([name, code]) => `${name}=${code}`)
-        .join(',') + ';';
+      const code =
+        info.mod.renderSource() +
+        `export var ` +
+        [...info.exported.entries()].map(([name, code]) => `${name}=${code}`).join(',') +
+        ';';
 
       outStatic.set(targetStaticName, code);
     }

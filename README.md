@@ -15,6 +15,22 @@ Think of it as doing code-splitting 'last', rather than first.
 One good way to understand what Kuto does is to run `./release.sh`, which builds Kuto itself.
 Try running a release, changing something in the source, and releasing again&mdash;you'll see extra static files appear.
 
+### Split Flags
+
+- `-d` dedups callable code (default: `false`)
+
+  With this flag enabled, if two classes or callables are exactly the same, they'll be merged into one.
+  For example:
+
+  ```ts
+  class A {}
+  class B {}
+
+  new A() instanceof B; // will be 'true' in `-d` mode
+  ```
+
+  This is turned off by default, as it can be dangerous.
+
 ## Notes
 
 (This README is a stub.

@@ -186,11 +186,21 @@ export type VarInfo = {
 
 export type AnalyzeBlock = {
   vars: Map<string, VarInfo>;
+  hasNested: boolean;
 };
 
 export function analyzeBlock(b: acorn.BlockStatement): AnalyzeBlock {
-  const out: AnalyzeBlock = { vars: new Map() };
+  const out: AnalyzeBlock = { vars: new Map(), hasNested: false };
   const mark: MarkIdentifierFn = (name, { nested, writes }) => {
+    if (name === '') {
+      // this is a short-circuit to mark hasNested
+      if (!nested || writes) {
+        throw new Error(`mark was called with empty var for nested=false || writes`);
+      }
+      out.hasNested = true;
+      return;
+    }
+
     const info = out.vars.get(name);
     if (info === undefined) {
       // pure use: not declared here

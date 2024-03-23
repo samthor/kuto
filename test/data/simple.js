@@ -1,4 +1,3 @@
-
 b();
 
 function a() {
@@ -6,6 +5,14 @@ function a() {
 }
 
 console.info('does complex thing lollololol');
+console.info('does complex thing lollololol');
+
+const x = () => {
+  console.info('same');
+};
+const y = () => {
+  console.info('same');
+};
 
 function b() {
   console.info('b');
@@ -13,5 +20,3 @@ function b() {
 }
 
 b();
-
-

@@ -10,6 +10,7 @@ export type SpiltArgs = {
   keep: number;
   sourcePath: string;
   dist: string;
+  dedupCallables: boolean;
 };
 
 export default async function cmdSplit(args: SpiltArgs) {
@@ -33,6 +34,7 @@ export default async function cmdSplit(args: SpiltArgs) {
     sourceName,
     staticName,
     existingStaticSource: existing.existingStaticSource,
+    dedupCallables: args.dedupCallables,
   });
   const liftStats = liftDefault(e, args.min);
 
@@ -56,7 +58,7 @@ export default async function cmdSplit(args: SpiltArgs) {
     remove: toRemove,
     lift: liftStats,
   });
-  console.info('total overhead bytes:', (((totalSize / source.length) - 1.0) * 100).toFixed(3) + '%');
+  console.info('total overhead bytes:', ((totalSize / source.length - 1.0) * 100).toFixed(3) + '%');
 
   // write new files, nuke old ones
   for (const e of toRemove) {
