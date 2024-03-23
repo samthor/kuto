@@ -206,7 +206,7 @@ export class ModDef {
         }
       }
       if (parts.length) {
-        lines.push(`import { ${parts.join(', ')} } from ${pj}`);
+        lines.push(`import {${parts.join(',')}} from ${pj}`);
         any = true;
       }
 
@@ -227,7 +227,7 @@ export class ModDef {
         }
       }
       if (reexportParts.length) {
-        lines.push(`export { ${reexportParts.join(', ')} } from ${pj}`);
+        lines.push(`export {${reexportParts.join(',')}} from ${pj}`);
         any = true;
       }
 
@@ -241,10 +241,10 @@ export class ModDef {
       for (const [remote, { name }] of this.allLocalExported) {
         parts.push(safeImportAs(name, remote));
       }
-      lines.push(`export { ${parts.join(', ')} }`);
+      lines.push(`export {${parts.join(',')}}`);
     }
 
     lines.push('');
-    return lines.join(';\n');
+    return lines.join(';');
   }
 }

@@ -1,4 +1,6 @@
 
+b();
+
 function a() {
   console.info('a has changed');
 }

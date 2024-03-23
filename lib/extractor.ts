@@ -86,7 +86,7 @@ export class StaticExtractor {
     {
       globalInMain: string;
       mod: ModDef;
-      body: (string | acorn.Statement)[];
+      exported: Map<string, string>;
       here: Set<string>;
     }
   >();
@@ -189,7 +189,6 @@ export class StaticExtractor {
         targetStaticName,
         find.immediateAccess ? callableStaticPrefix : normalStaticPrefix,
       );
-      console.info('generating static name', name);
     }
     if (!name || name === 'default') {
       throw new Error(`could not name code put into static: ${args}`);
@@ -202,25 +201,20 @@ export class StaticExtractor {
     const targetStatic = withDefault(this.staticToWrite, targetStaticName, () => ({
       globalInMain: this.varForMain(),
       mod: new ModDef(),
-      body: [],
+      exported: new Map(),
       here: new Set<string>(),
     }));
     if (find.immediateAccess) {
       // acorn 'eats' the extra () before it returns, so nothing is needed on the other side
-      code = `const ${name} = () => (${code});`;
-    } else {
-      // can evaluate immediately
-      code = `const ${name} = ${code};`;
+      code = `() => (${code});`;
     }
 
     // don't push code again if we have effectively the same
     if (!existing?.here) {
-      targetStatic.body.push(code);
+      targetStatic.exported.set(name, code);
     }
-    targetStatic.here.add(name);
 
-    // export from static back to main, replacing previous version of whatever
-    targetStatic.mod.addExportLocal(name);
+    // update how we reference this from the main file
     if (args.var) {
       // TODO: referencing a global import isn't nessecarily smaller
       let replacedCode =
@@ -233,7 +227,7 @@ export class StaticExtractor {
         throw new Error(`can't hoist decl without name`)
       }
       const declName = decl.id.name as string;
-      this.nodesToReplace.set(args.node, `const ${declName} = ${name};`);
+      this.nodesToReplace.set(args.node, `var ${declName} = ${name};`);
       this.agg.mod.addImport(targetStaticName, name);
     }
 
@@ -273,17 +267,13 @@ export class StaticExtractor {
     // render statics
     const outStatic = new Map<string, string>();
     for (const [targetStaticName, info] of this.staticToWrite) {
-      let code = info.body
-        .map((p) => (typeof p === 'string' ? p : this.args.source.substring(p.start, p.end)))
-        .join('');
-
-      // we import everything we need, even things that may be in _this static_
-      // reconcile it by removing things we have, before render
-      // TODO: we could import them from _another_ static? ordering issues?
-      for (const h of info.here) {
-        info.mod.removeImport(h);
+      if (!info.exported.size) {
+        // otherwise why does this exist??
+        throw new Error(`no vars to export in static file?`)
       }
-      code += info.mod.renderSource();
+      const code = info.mod.renderSource() + `export var ` + [...info.exported.entries()]
+        .map(([name, code]) => `${name}=${code}`)
+        .join(',') + ';';
 
       outStatic.set(targetStaticName, code);
     }
@@ -305,7 +295,7 @@ export class StaticExtractor {
       const h = this.agg.exportDefaultHole;
 
       // by definition we can't reference ourselves, so this var is 'pointless'
-      skip.push({ ...h, replace: `const ${this.exportDefaultName} = ` });
+      skip.push({ ...h, replace: `const ${this.exportDefaultName}=` });
       skip.push({ start: h.after, end: h.after, replace: ';' });
     }
 
