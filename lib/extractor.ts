@@ -214,9 +214,7 @@ export class StaticExtractor {
       targetStatic.exported.set(name, code);
     }
 
-    let declName = '';
-
-    // update how we reference this from the main file
+    // update how we reference the now yeeted code from the main file
     if (args.var) {
       // TODO: referencing a global import isn't nessecarily smaller
       let replacedCode =
@@ -228,10 +226,8 @@ export class StaticExtractor {
       if (!(decl.type === 'ClassDeclaration' || decl.type === 'FunctionDeclaration')) {
         throw new Error(`can't hoist decl without name`)
       }
-      declName = decl.id.name as string;
-      //      this.nodesToReplace.set(args.node, `var ${declName} = ${name};`);
       this.nodesToReplace.set(args.node, '');
-      this.agg.mod.addImport(targetStaticName, declName, name);
+      this.agg.mod.addImport(targetStaticName, decl.id.name, name);
     }
 
     // clone imports needed to run this code (order is maintained in main file)

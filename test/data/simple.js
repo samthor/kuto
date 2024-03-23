@@ -2,7 +2,7 @@
 b();
 
 function a() {
-  console.info('a has changed');
+  console.info('a has additionally changed');
 }
 
 function b() {
