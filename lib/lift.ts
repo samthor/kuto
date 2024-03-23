@@ -4,6 +4,7 @@ import type * as acorn from 'acorn';
 export function liftDefault(e: StaticExtractor, minSize: number) {
   const stats = {
     fn: 0,
+    class: 0,
     expr: 0,
     assignment: 0,
     _skip: 0,
@@ -12,18 +13,29 @@ export function liftDefault(e: StaticExtractor, minSize: number) {
   // lift top-level fn blocks
   for (const part of e.block.body) {
     const size = part.end - part.start;
-    if (part.type === 'FunctionDeclaration' && size >= minSize) {
-      if (e.liftFunctionDeclaration(part)) {
-        ++stats.fn;
-      } else {
-        ++stats._skip;
-      }
+    if (size < minSize) {
+      continue;
+    }
+
+    switch (part.type) {
+      case 'FunctionDeclaration':
+        if (e.liftFunctionDeclaration(part)) {
+          ++stats.fn;
+        } else {
+          ++stats._skip;
+        }
+        break;
+
+      case 'ClassDeclaration':
+        // TODO: esbuild (and friends?) _already_ transform these to `const ClassName = class { ... }`,
+        // so in already bundled code you don't actually see this. So it's important but less immediate.
+        if (e.liftClassDeclaration(part)) {
+          ++stats.class;
+        } else {
+          ++stats._skip;
+        }
     }
   }
-
-  // TODO: lift top-level class blocks
-  // TODO: esbuild (and friends?) _already_ transform these to `const ClassName = class { ... }`,
-  // so in already bundled code you don't actually see this. So it's important but less immediate.
 
   // lift expressions in a few places (all top-level though?)
   const maybeLift = (expr: acorn.Expression | null | undefined, ok: () => void) => {

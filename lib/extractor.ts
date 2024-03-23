@@ -172,10 +172,6 @@ export class StaticExtractor {
     if (find.rw) {
       return null; // no support for rw
     }
-    if (!args.var && find.immediateAccess) {
-      // TODO: wrong for class defs
-      throw new Error(`top-level fn should not have immediateAccess`);
-    }
 
     let name: string = '';
     let targetStaticName = this.args.staticName;
@@ -264,11 +260,19 @@ export class StaticExtractor {
   liftFunctionDeclaration(fn: acorn.FunctionDeclaration) {
     const vi = this.vars.get(fn.id.name);
     if (!vi?.local || vi.local.writes !== 1 || vi.nested?.writes) {
-      return null;
+      return null; // discard complex
     }
 
     const analysis = analyzeFunction(fn);
     return this.addCodeToStatic({ node: fn, analysis });
+  }
+
+  liftClassDeclaration(c: acorn.ClassDeclaration) {
+    const { vars } = analyzeBlock(createBlock(c));
+    // TODO: bit of a hack, otherwise we think class is written internally
+    // (which is impossible)
+    vars.delete(c.id.name);
+    return this.addCodeToStatic({ node: c, find: vars });
   }
 
   liftExpression(e: acorn.Expression) {
