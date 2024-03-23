@@ -11,7 +11,7 @@ export type LoadExistingArgs = {
 export function loadExisting(args: LoadExistingArgs) {
   const existing = fs
     .readdirSync(args.dist)
-    .filter((x) => /\.sjs-\w+.js$/.test(x))
+    .filter((x) => /\.kt-\w+.js$/.test(x))
     .toReversed() // prefer latest first
     .map((name) => {
       const bytes = fs.readFileSync(path.join(args.dist, name));

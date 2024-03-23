@@ -219,8 +219,9 @@ export class StaticExtractor {
       here: new Set<string>(),
     }));
     if (find.immediateAccess) {
+      // we don't know what's here so need ()'s (could be "foo,bar")
       // acorn 'eats' the extra () before it returns, so nothing is needed on the other side
-      code = `() => (${code})`;
+      code = `_=>(${code})`;
     }
     targetStatic.exported.set(name, code);
 
@@ -272,7 +273,7 @@ export class StaticExtractor {
     // TODO: bit of a hack, otherwise we think class is written internally
     // (which is impossible)
     const self = analysis.vars.get(c.id.name);
-    if (!self || !self?.nested?.writes || self.local?.writes !== 1) {
+    if (!self || self.nested?.writes || self.local?.writes !== 1) {
       throw new Error(`inconsistent class decl`);
     }
     analysis.vars.delete(c.id.name);

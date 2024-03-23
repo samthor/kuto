@@ -5,6 +5,8 @@ import { liftDefault } from '../lib/lift.ts';
 import { loadExisting } from '../lib/bin.ts';
 import { loadAndMaybeTransform } from '../lib/load.ts';
 
+const startOfTime = 1710925200000; // 2024-03-24 20:00 SYD time
+
 export type SpiltArgs = {
   min: number;
   keep: number;
@@ -18,11 +20,12 @@ export default async function cmdSplit(args: SpiltArgs) {
 
   fs.mkdirSync(dist, { recursive: true });
 
-  const now = +new Date();
+  // it doesn't matter what base this is, or what number it is; later runs 'prefer' files sorted earlier
+  const key = toBase62(+new Date() - startOfTime, 7);
 
   const parts = path.parse(sourcePath);
   const sourceName = parts.base;
-  const staticName = parts.name + `.sjs-${now.toString(36).padStart(8, '0')}.js`;
+  const staticName = parts.name + `.kt-${key}.js`;
 
   const existing = loadExisting(args);
 
@@ -58,7 +61,7 @@ export default async function cmdSplit(args: SpiltArgs) {
     remove: toRemove,
     lift: liftStats,
   });
-  console.info('total overhead bytes:', ((totalSize / source.length - 1.0) * 100).toFixed(3) + '%');
+  console.info('overhead:', toPercentChange(totalSize / source.length));
 
   // write new files, nuke old ones
   for (const e of toRemove) {
@@ -71,3 +74,19 @@ export default async function cmdSplit(args: SpiltArgs) {
 
   console.info('Ok!');
 }
+
+const toPercentChange = (v: number) => {
+  const sign = v < 1.0 ? '' : '+';
+  return sign + ((v - 1.0) * 100).toFixed(1) + '%';
+};
+
+function toBase62(v: number, pad: number = 0) {
+  const b62digit = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+  let result = '';
+  while (v > 0) {
+    result = b62digit[v % b62digit.length] + result;
+    v = Math.floor(v / b62digit.length);
+  }
+  return result.padStart(pad, '0');
+}
+

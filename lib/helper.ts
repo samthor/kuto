@@ -40,17 +40,43 @@ export function renderOnly(raw: string, include: { start: number; end: number }[
 
   const holes: { start: number; end: number }[] = [];
 
+  let lastPart = '';
   let lastEnd = 0;
   const out = include
     .map(({ start, end }) => {
-      if (lastEnd < start) {
-        holes.push({ start: lastEnd, end: start });
+      const holeLength = start - lastEnd;
+      let space = ''.padEnd(holeLength);
+
+      if (!holeLength) {
+        // zero padding (or start)
+        lastEnd = end;
+      } else {
+        const hole = { start: lastEnd, end: start };
+        holes.push(hole);
+        lastEnd = end;
+
+        if (partNeedsSemi(lastPart)) {
+          ++hole.start;
+          space = ';'.padEnd(holeLength);
+        }
+
       }
-      const space = ''.padEnd(start - lastEnd);
-      lastEnd = end;
-      return space + raw.substring(start, end);
+
+      const part = raw.substring(start, end);
+      lastPart = part;
+      return space + part;
     })
     .join('');
 
   return { out, holes };
+}
+
+function partNeedsSemi(raw: string) {
+  if (/^(class|function)\b/.test(raw)) {
+    return false;
+  }
+  if (raw.endsWith(';')) {
+    return false;
+  }
+  return true;
 }
