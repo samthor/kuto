@@ -268,11 +268,15 @@ export class StaticExtractor {
   }
 
   liftClassDeclaration(c: acorn.ClassDeclaration) {
-    const { vars } = analyzeBlock(createBlock(c));
+    const analysis = analyzeBlock(createBlock(c));
     // TODO: bit of a hack, otherwise we think class is written internally
     // (which is impossible)
-    vars.delete(c.id.name);
-    return this.addCodeToStatic({ node: c, find: vars });
+    const self = analysis.vars.get(c.id.name);
+    if (!self || !self?.nested?.writes || self.local?.writes !== 1) {
+      throw new Error(`inconsistent class decl`);
+    }
+    analysis.vars.delete(c.id.name);
+    return this.addCodeToStatic({ node: c, analysis });
   }
 
   liftExpression(e: acorn.Expression) {
