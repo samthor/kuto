@@ -78,6 +78,11 @@ export class StaticExtractor {
   private _block: acorn.BlockStatement;
 
   /**
+   * If we need to export A from main, but A is already used 'for something real', then store what we shipped A as.
+   */
+  private mainLocalExportAs = new Map<string, string>();
+
+  /**
    * Needed in cases where a decl/expression is exported as default without a name.
    */
   private exportDefaultName?: string;
@@ -251,9 +256,29 @@ export class StaticExtractor {
     }
 
     // import locals from main (this might be a complex redir)
-    for (const l of find.locals.keys()) {
-      this.agg.mod.addExportLocal(l);
-      targetStatic.mod.addImport(this.args.sourceName, l);
+    for (const mainLocal of find.locals.keys()) {
+      // if we have something like:
+      //   const A = 1, B = 2;
+      //   export { B as A };
+      // ..but we need A in the bundle, we need to rename it for the 'journey'; this seems rare for
+      // hand-crafted code, but very possible with bundlers
+
+      // TODO: this code could use a tidy up
+      let nameForTransport = mainLocal;
+      const prev = this.agg.mod.getExport(nameForTransport);
+      if (prev?.name !== mainLocal) {
+        const alreadyShadowed = this.mainLocalExportAs.get(mainLocal);
+        if (alreadyShadowed) {
+          continue;
+        }
+        nameForTransport = this.varForMain();
+        this.mainLocalExportAs.set(mainLocal, nameForTransport);
+      } else if (prev) {
+        continue; // nothing to do, already exported
+      }
+
+      this.agg.mod.addExportLocal(nameForTransport, mainLocal);
+      targetStatic.mod.addImport(this.args.sourceName, mainLocal, nameForTransport);
     }
     return {};
   }

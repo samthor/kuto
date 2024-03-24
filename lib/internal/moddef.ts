@@ -94,7 +94,14 @@ export class ModDef {
     if (prev) {
       if (prev.import !== importSource || prev.remote !== remoteName) {
         // only throw if different
-        throw new Error(`already local: ${localName} from ${importSource}`);
+        throw new Error(
+          `already imported differently: ${localName} (was ${JSON.stringify(
+            prev,
+          )}, update ${JSON.stringify({
+            import: importSource,
+            remote: remoteName,
+          })})`,
+        );
       }
       return;
     }
@@ -137,8 +144,17 @@ export class ModDef {
   }
 
   addExportFrom(importSource: string, exportedName: string, remoteName: string = '') {
-    if (this._exports.has(exportedName)) {
-      throw new Error(`already exported: ${exportedName}`);
+    const prev = this._exports.get(exportedName);
+    if (prev !== undefined) {
+      if (prev.import !== importSource && prev.name !== remoteName) {
+        throw new Error(
+          `already exported: ${exportedName} (was ${JSON.stringify(prev)}, update ${JSON.stringify({
+            import: importSource,
+            name: remoteName,
+          })})`,
+        );
+      }
+      // got called twice for some reason
     }
     this._exports.set(exportedName, { import: importSource, name: remoteName });
 
@@ -160,12 +176,21 @@ export class ModDef {
     }
   }
 
+  getExport(exportedName: string) {
+    const prev = this._exports.get(exportedName);
+    return prev ? { ...prev } : undefined;
+  }
+
   addExportLocal(exportedName: string, sourceName: string = exportedName) {
     const prev = this._exports.get(exportedName);
     if (prev) {
       if (prev.import || prev.name !== sourceName) {
         // only throw if different
-        throw new Error(`already exported: ${exportedName}`);
+        throw new Error(
+          `already exported: ${exportedName} (was ${JSON.stringify(prev)}, update ${JSON.stringify({
+            name: sourceName,
+          })})`,
+        );
       }
       return;
     }

@@ -1,2 +1,9 @@
-console.info('no same long lol');
-console.info('no same long lol');
+const A = () => 'something that is interesting but when exported, shadows a local';
+
+const B = 'something else that is very lonfg hahaha';
+
+console.info('this is a long statement that uses B', { B });
+
+console.info('YET another long statement that uses', { B });
+
+export { A as B };
