@@ -4,6 +4,9 @@ const B = 'something else that is very lonfg hahaha';
 
 console.info('this is a long statement that uses B', { B });
 
-console.info('YET another long statement that uses', { B });
-
 export { A as B };
+
+const _1 = 'Lol shadow Kuto vars';
+
+console.info('YET another long statement that uses', { B, _1 });
+console.info(_1);

@@ -150,7 +150,7 @@ export class StaticExtractor {
     for (let i = 1; i < 100_000; ++i) {
       const cand = `${prefix}${i.toString(36)}`;
       const check = `${cand}~${staticName}`;
-      if (!this.staticVars.has(check)) {
+      if (!this.staticVars.has(check) && !this.vars.has(cand)) {
         this.staticVars.add(check);
         return cand;
       }
