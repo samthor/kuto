@@ -1,6 +1,7 @@
 {
   "type": "module",
   "author": "Sam Thorogood <sam.thorogood@gmail.com>",
+  "repository": "git@github.com:samthor/kuto.git",
   "license": "Apache-2.0",
   "devDependencies": {
     "@types/node": "^20.11.28",
@@ -9,7 +10,8 @@
     "tsx": "^4.7.1"
   },
   "scripts": {
-    "prepublishOnly": "bash release.sh"
+    "prepublishOnly": "bash release.sh",
+    "test": "bash demo-simple.sh"
   },
   "bin": {
     "kuto": "./dist/app.js"
