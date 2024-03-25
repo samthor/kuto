@@ -17,5 +17,5 @@
     "kuto": "./dist/app.js"
   },
   "name": "kuto",
-  "version": "0.3.1"
+  "version": "0.3.2"
 }
