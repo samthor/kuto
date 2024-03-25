@@ -2,17 +2,19 @@
 
 set -eu
 
-TARGET=node12 # old codebases require old builds
+TARGET=node14
+OUTFILE=dist/raw/app.js
 
 esbuild \
     --bundle \
     --format=esm \
-    --outfile=dist/raw/app.js \
+    --outfile=${OUTFILE} \
     --platform=node \
     --external:esbuild \
     --target=${TARGET} \
     app.ts
-node dist/raw/app.js split dist/raw/app.js dist/split/
+
+node ${OUTFILE} split ${OUTFILE} dist/split/
 
 rm dist/*.js &2>/dev/null || true
 for X in dist/split/*; do

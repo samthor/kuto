@@ -7,6 +7,7 @@ const needsBuildExt = (ext: string) => ['.ts', '.tsx', '.jsx'].includes(ext);
 export async function loadAndMaybeTransform(name: string) {
   const { ext } = path.parse(name);
   let source = fs.readFileSync(name, 'utf-8');
+  const stat = fs.statSync(name);
 
   // lazily compile with esbuild (throws if not available)
   if (needsBuildExt(ext)) {
@@ -21,5 +22,5 @@ export async function loadAndMaybeTransform(name: string) {
 
   const p = acorn.parse(source, { ecmaVersion: 'latest', sourceType: 'module' });
 
-  return { p, name, source };
+  return { p, name, source, stat };
 }

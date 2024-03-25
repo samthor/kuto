@@ -318,6 +318,8 @@ export class StaticExtractor {
   }
 
   build() {
+    const s = this.args.source;
+
     // render statics
     const outStatic = new Map<string, string>();
     for (const [targetStaticName, info] of this.staticToWrite) {
@@ -336,10 +338,7 @@ export class StaticExtractor {
 
     // render main
 
-    const { out: sourceWithoutModules, holes: skipHoles } = renderOnly(
-      this.args.source,
-      this.agg.rest,
-    );
+    const { out: sourceWithoutModules, holes: skipHoles } = renderOnly(s, this.agg.rest);
     const skip: { start: number; end: number; replace?: string }[] = [
       skipHoles,
       [...this.nodesToReplace.entries()].map(([node, replace]) => {
@@ -355,7 +354,15 @@ export class StaticExtractor {
       skip.push({ start: h.after, end: h.after, replace: ';' });
     }
 
-    let outMain = renderSkip(sourceWithoutModules, skip);
+    let outMain = '';
+
+    // persist shebang if present
+    if (s.startsWith('#!')) {
+      const indexOf = s.indexOf('\n');
+      outMain += s.substring(0, indexOf + 1 || s.length);
+    }
+
+    outMain += renderSkip(sourceWithoutModules, skip);
     outMain += this.agg.mod.renderSource();
 
     return { main: outMain, static: outStatic };
