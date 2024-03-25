@@ -1,27 +1,68 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { relativize } from './helper.ts';
+import { buildJoin, urlAgnosticRelativeBasename } from './helper.ts';
+import { parse } from './load.ts';
+import { aggregateImports } from './internal/analyze/module.ts';
 
-const dec = new TextDecoder();
+function hasCorpusSuffix(s: string) {
+  return /\.kt-\w+.js$/.test(s);
+}
 
 export type LoadExistingArgs = {
-  dist: string;
+  from: string;
   keep: number;
 };
 
-export function loadExisting(args: LoadExistingArgs) {
-  const existing = fs
-    .readdirSync(args.dist)
-    .filter((x) => /\.kt-\w+.js$/.test(x))
-    .toReversed() // prefer latest first
-    .map((name) => {
-      const bytes = fs.readFileSync(path.join(args.dist, name));
-      const text = dec.decode(bytes);
-      return { name: relativize(name), bytes, text, skip: true };
-    });
+function isDir(s: fs.PathLike) {
+  try {
+    const stat = fs.statSync(s);
+    return stat.isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+async function loadSource(s: string) {
+  if (s.startsWith('https://') || s.startsWith('http://')) {
+    const r = await fetch(s);
+    if (!r.ok) {
+      throw new Error(
+        `couldn't fetch old source from ${JSON.stringify(s)}: ${r.status} ${r.statusText}`,
+      );
+    }
+    return r.text();
+  }
+
+  return fs.readFileSync(s, 'utf-8');
+}
+
+export async function loadExisting(args: LoadExistingArgs) {
+  let cand: string[];
+
+  if (isDir(args.from)) {
+    cand = fs.readdirSync(args.from).map((c) => path.join(args.from, c));
+  } else {
+    const text = await loadSource(args.from);
+    const join = buildJoin(args.from);
+
+    const p = parse(text);
+    const agg = aggregateImports(p);
+
+    cand = [...agg.mod.importSources()].map(({ name }) => join(name));
+    cand.unshift(args.from);
+  }
+
+  const load = cand.filter((x) => hasCorpusSuffix(x));
+
+  const existing = await Promise.all(
+    load.map(async (name) => {
+      const text = await loadSource(name);
+      return { name: urlAgnosticRelativeBasename(name), text, skip: true };
+    }),
+  );
 
   // keep the top-n largest static bundles
-  const existingBySize = existing.sort(({ bytes: a }, { bytes: b }) => b.length - a.length);
+  const existingBySize = existing.sort(({ text: a }, { text: b }) => b.length - a.length);
   const keepN = Math.min(args.keep, existingBySize.length);
   for (let i = 0; i < keepN; ++i) {
     existingBySize[i].skip = false;
@@ -30,11 +71,20 @@ export function loadExisting(args: LoadExistingArgs) {
   // load
   const out = new Map<string, string>();
   for (const e of existing) {
-    if (e.skip) {
-      continue;
+    if (!e.skip) {
+      if (out.has(e.name)) {
+        throw new Error(`duplicate corpus: ${e.name}`);
+      }
+      out.set(e.name, e.text);
     }
-    out.set(e.name, e.text);
   }
 
-  return { existingStaticSource: out, cand: existing.map(({ name }) => name) };
+  // priors
+  const prior = new Map<string, string>();
+  for (const name of load) {
+    const b = urlAgnosticRelativeBasename(name);
+    prior.set(b, name);
+  }
+
+  return { existingStaticSource: out, prior };
 }

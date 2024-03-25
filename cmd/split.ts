@@ -4,7 +4,7 @@ import { StaticExtractor } from '../lib/extractor.ts';
 import { liftDefault } from '../lib/lift.ts';
 import { loadExisting } from '../lib/bin.ts';
 import { loadAndMaybeTransform } from '../lib/load.ts';
-import { relativize } from '../lib/helper.ts';
+import { isUrl, relativize, urlAgnosticBasename } from '../lib/helper.ts';
 
 const startOfTime = 1710925200000; // 2024-03-24 20:00 SYD time
 
@@ -12,6 +12,7 @@ export type SpiltArgs = {
   min: number;
   keep: number;
   sourcePath: string;
+  oldPath: string;
   dist: string;
   dedupCallables: boolean;
 };
@@ -28,7 +29,10 @@ export default async function cmdSplit(args: SpiltArgs) {
   const sourceName = relativize(parts.base);
   const staticName = relativize(parts.name + `.kt-${key}.js`);
 
-  const existing = loadExisting(args);
+  const existing = await loadExisting({
+    from: args.oldPath || args.dist,
+    keep: args.keep,
+  });
 
   const { p, source } = await loadAndMaybeTransform(args.sourcePath);
 
@@ -44,7 +48,7 @@ export default async function cmdSplit(args: SpiltArgs) {
 
   // run
   const out = e.build();
-  const toRemove = existing.cand.filter((e) => !out.static.has(e));
+  const disused = [...existing.prior.keys()].filter((name) => !out.static.has(name));
 
   // generate stats, show most recent first
   const sizes: Record<string, number> = {};
@@ -59,14 +63,17 @@ export default async function cmdSplit(args: SpiltArgs) {
   console.info('stats', {
     source: { size: source.length },
     sizes,
-    remove: toRemove,
+    disused,
     lift: liftStats,
   });
   console.info('overhead:', toPercentChange(totalSize / source.length));
 
   // write new files, nuke old ones
-  for (const e of toRemove) {
-    fs.rmSync(path.join(dist, e));
+  for (const name of disused) {
+    const from = existing.prior.get(name)!;
+    if (!isUrl(from)) {
+      fs.rmSync(from);
+    }
   }
   fs.writeFileSync(path.join(dist, sourceName), out.main);
   for (const [name, code] of out.static) {

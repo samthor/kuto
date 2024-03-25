@@ -38,6 +38,12 @@ cmd.register('split', {
       short: 'd',
       help: 'dedup callables (may cause inheritance issues)',
     },
+    corpus: {
+      type: 'string',
+      default: '',
+      short: 'c',
+      help: 'alternative path to historic corpus',
+    },
   },
   positional: true,
   usageSuffix: '<source> <outdir/>',
@@ -51,6 +57,7 @@ cmd.register('split', {
       keep: +(res.values['keep'] ?? 0),
       sourcePath: res.positionals[0],
       dist: res.positionals[1],
+      oldPath: (res.values['corpus'] as string) || '',
       dedupCallables: Boolean(res.values['dedup-callables']),
     });
   },

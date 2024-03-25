@@ -11,6 +11,10 @@ Chromium even caches [the bytecode](https://v8.dev/blog/code-caching-for-devs) o
 Ideally, Kuto operates on a large output bundle from another tool.
 Think of it as doing code-splitting 'last', rather than first.
 
+## Requirements
+
+Node 14+.
+
 ## Usage
 
 You can install via "kuto" and then run `npx kuto` to learn more.
@@ -24,9 +28,20 @@ $ kuto split yourbundle.js out/
 This will generate a 'main' part and a corpus of code.
 If you build or change "yourbundle.js" and run Kuto _again_, this will re-use the existing corpus where possible.
 
-Note that you'll **need to keep the old generated code around** for Kuto to work&mdash;check it in, or have a way to fetch it from your deployed site.
+Note that you'll **need to keep the old generated code around** for Kuto to work.
 
 ### Flags
+
+- `-c <source>` where to find old corpus data (default: use output dir)
+
+  Normally, Kuto reads old corpus data from the output path, but this flag can be used to point to either a directory containing that data.
+  It can also point directly to a Kuto-generated 'main' file.
+  This could be useful to point to the currently published version of your code.
+
+  For example:
+
+  - `-c https://example.com/source.js` to load a Kuto-generated 'main' from a real website (uses `fetch()`)
+  - `-c path/to/old/source/dir` to use any corpus in this dir
 
 - `-d` dedups callables (default: `false`)
 
