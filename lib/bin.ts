@@ -1,5 +1,6 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { relativize } from './helper.ts';
 
 const dec = new TextDecoder();
 
@@ -16,7 +17,7 @@ export function loadExisting(args: LoadExistingArgs) {
     .map((name) => {
       const bytes = fs.readFileSync(path.join(args.dist, name));
       const text = dec.decode(bytes);
-      return { name, bytes, text, skip: true };
+      return { name: relativize(name), bytes, text, skip: true };
     });
 
   // keep the top-n largest static bundles

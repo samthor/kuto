@@ -1,6 +1,6 @@
 import * as acorn from 'acorn';
 import { analyzeFunction } from './analyze.ts';
-import { renderOnly, renderSkip, withDefault } from './helper.ts';
+import { relativize, renderOnly, renderSkip, withDefault } from './helper.ts';
 import { ModDef } from './internal/moddef.ts';
 import { findVars, resolveConst } from './interpret.ts';
 import { AnalyzeBlock, VarInfo, analyzeBlock } from './internal/analyze/block.ts';
@@ -26,10 +26,13 @@ function extractExistingStaticCode(raw: Iterable<[string, string]>) {
     const p = acorn.parse(source, { ecmaVersion: 'latest', sourceType: 'module' });
     const agg = aggregateImports(p);
 
+    // ensure disambiguation from node imports
+    const relPath = relativize(path);
+
     const add = (node: acorn.Node, name: string) => {
       const code = source.substring(node.start, node.end);
       if (!existingByCode.has(code)) {
-        existingByCode.set(code, { name, import: path });
+        existingByCode.set(code, { name, import: relPath });
       }
     };
 
@@ -101,7 +104,11 @@ export class StaticExtractor {
   private nodesToReplace = new Map<acorn.Node, string>();
 
   constructor(args: ExtractStaticArgs) {
-    this.args = { ...args };
+    this.args = {
+      ...args,
+      staticName: relativize(args.staticName),
+      sourceName: relativize(args.sourceName),
+    };
 
     // analyze all provided existing statics, record used vars
     this.existingByCode = extractExistingStaticCode(args.existingStaticSource);

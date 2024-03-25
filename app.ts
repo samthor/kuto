@@ -54,4 +54,7 @@ cmd.register('split', {
   },
 });
 
-await cmd.run();
+const p = Promise.resolve(cmd.run());
+p.catch((e) => {
+  throw e;
+});

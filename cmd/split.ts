@@ -4,6 +4,7 @@ import { StaticExtractor } from '../lib/extractor.ts';
 import { liftDefault } from '../lib/lift.ts';
 import { loadExisting } from '../lib/bin.ts';
 import { loadAndMaybeTransform } from '../lib/load.ts';
+import { relativize } from '../lib/helper.ts';
 
 const startOfTime = 1710925200000; // 2024-03-24 20:00 SYD time
 
@@ -24,8 +25,8 @@ export default async function cmdSplit(args: SpiltArgs) {
   const key = toBase62(+new Date() - startOfTime, 7);
 
   const parts = path.parse(sourcePath);
-  const sourceName = parts.base;
-  const staticName = parts.name + `.kt-${key}.js`;
+  const sourceName = relativize(parts.base);
+  const staticName = relativize(parts.name + `.kt-${key}.js`);
 
   const existing = loadExisting(args);
 
@@ -89,4 +90,3 @@ function toBase62(v: number, pad: number = 0) {
   }
   return result.padStart(pad, '0');
 }
-

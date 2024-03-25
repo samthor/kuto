@@ -1,4 +1,4 @@
-import { relativize, withDefault } from '../helper.ts';
+import { withDefault } from '../helper.ts';
 
 type SourceInfo = {
   /**
@@ -213,7 +213,7 @@ export class ModDef {
     const lines: string[] = [];
 
     for (const [path, info] of this.bySource) {
-      const pj = JSON.stringify(relativize(path));
+      const pj = JSON.stringify(path);
       let any = false;
 
       for (const localName of info.imports.get('') ?? []) {
