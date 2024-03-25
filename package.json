@@ -7,11 +7,12 @@
     "@types/node": "^20.11.28",
     "acorn": "^8.11.3",
     "esbuild": "^0.20.2",
-    "tsx": "^4.7.1"
+    "tsx": "^4.7.1",
+    "zx": "^7.2.3"
   },
   "scripts": {
     "prepublishOnly": "bash release.sh",
-    "test": "bash demo-simple.sh"
+    "test": "npx tsx test.ts"
   },
   "bin": {
     "kuto": "./dist/app.js"
