@@ -52,7 +52,8 @@ export function renderSkip(
   raw: string,
   skip: Iterable<{ start: number; end: number; replace?: string }>,
 ): string {
-  const replaces = [...skip].toSorted(({ start: a }, { start: b }) => a - b);
+  const replaces = [...skip];
+  replaces.sort(({ start: a }, { start: b }) => a - b);
 
   let out = raw.substring(0, replaces.at(0)?.start);
   for (let i = 0; i < replaces.length; ++i) {
@@ -66,7 +67,7 @@ export function renderSkip(
 }
 
 export function renderOnly(raw: string, include: { start: number; end: number }[]) {
-  include = include.toSorted(({ start: a }, { start: b }) => a - b);
+  include = [...include].sort(({ start: a }, { start: b }) => a - b);
 
   const holes: { start: number; end: number }[] = [];
 
