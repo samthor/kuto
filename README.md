@@ -23,7 +23,8 @@ $ kuto split yourbundle.js out/
 
 This will generate a 'main' part and a corpus of code.
 If you build or change "yourbundle.js" and run Kuto _again_, this will re-use the existing corpus where possible.
-(You'll need to keep the old corpus around for this&mdash;check it in, or have a way to fetch it from your deployed site.)
+
+Note that you'll **need to keep the old generated code around** for Kuto to work&mdash;check it in, or have a way to fetch it from your deployed site.
 
 ### Flags
 
