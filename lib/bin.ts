@@ -70,6 +70,7 @@ export async function loadExisting(args: LoadExistingArgs) {
 
   // load
   const out = new Map<string, string>();
+  const prior = new Set<string>();
   for (const e of existing) {
     if (!e.skip) {
       if (out.has(e.name)) {
@@ -77,14 +78,8 @@ export async function loadExisting(args: LoadExistingArgs) {
       }
       out.set(e.name, e.text);
     }
+    prior.add(e.name);
   }
 
-  // priors
-  const prior = new Map<string, string>();
-  for (const name of load) {
-    const b = urlAgnosticRelativeBasename(name);
-    prior.set(b, name);
-  }
-
-  return { existingStaticSource: out, prior };
+  return { existingStaticSource: out, prior: [...prior] };
 }

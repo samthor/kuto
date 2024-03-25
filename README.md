@@ -26,15 +26,16 @@ $ kuto split yourbundle.js out/
 ```
 
 This will generate a 'main' part and a corpus of code.
-If you build or change "yourbundle.js" and run Kuto _again_, this will re-use the existing corpus where possible.
+If you build or change "yourbundle.js" and run Kuto _again_, this will re-use the existing corpus where possible, and remove completely disused corpus files.
 
 Note that you'll **need to keep the old generated code around** for Kuto to work.
+By default, this looks in the output dir, but you can change it with a flag.
 
 ### Flags
 
-- `-c <source>` where to find old corpus data (default: use output dir)
+- `-c <old>` where to find old corpus data (default: use output dir)
 
-  Normally, Kuto reads old corpus data from the output path, but this flag can be used to point to either a directory containing that data.
+  Normally, Kuto reads old corpus data from the output path, but this flag can be used to point to a different location.
   It can also point directly to a Kuto-generated 'main' file.
   This could be useful to point to the currently published version of your code.
 
