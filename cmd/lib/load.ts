@@ -1,8 +1,12 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { buildJoin, urlAgnosticRelativeBasename } from './helper.ts';
-import { parse } from './load.ts';
-import { aggregateImports } from './internal/analyze/module.ts';
+import { buildJoin, urlAgnosticRelativeBasename } from '../lib/helper.ts';
+import { aggregateImports } from '../../lib/internal/analyze/module.ts';
+import * as acorn from 'acorn';
+
+export function parse(source: string) {
+  return acorn.parse(source, { ecmaVersion: 'latest', sourceType: 'module' });
+}
 
 function hasCorpusSuffix(s: string) {
   return /\.kt-\w+.js$/.test(s);
@@ -82,4 +86,26 @@ export async function loadExisting(args: LoadExistingArgs) {
   }
 
   return { existingStaticSource: out, prior: [...prior] };
+}
+
+const needsBuildExt = (ext: string) => ['.ts', '.tsx', '.jsx'].includes(ext);
+
+export async function loadAndMaybeTransform(name: string) {
+  const { ext } = path.parse(name);
+  let source = fs.readFileSync(name, 'utf-8');
+  const stat = fs.statSync(name);
+
+  // lazily compile with esbuild (throws if not available)
+  if (needsBuildExt(ext)) {
+    const esbuild = await import('esbuild');
+    const t = esbuild.transformSync(source, {
+      loader: ext.endsWith('x') ? 'tsx' : 'ts',
+      format: 'esm',
+      platform: 'neutral',
+    });
+    source = t.code;
+  }
+
+  const p = parse(source);
+  return { p, name, source, stat };
 }

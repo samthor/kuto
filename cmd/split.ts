@@ -2,11 +2,10 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { StaticExtractor } from '../lib/extractor.ts';
 import { liftDefault } from '../lib/lift.ts';
-import { loadExisting } from '../lib/bin.ts';
-import { loadAndMaybeTransform } from '../lib/load.ts';
-import { isUrl, relativize } from '../lib/helper.ts';
-
-const startOfTime = 1710925200000; // 2024-03-24 20:00 SYD time
+import { loadAndMaybeTransform } from './lib/load.ts';
+import { loadExisting } from './lib/load.ts';
+import { relativize } from '../lib/helper.ts';
+import { buildCorpusName } from '../lib/name.ts';
 
 export type SpiltArgs = {
   min: number;
@@ -22,12 +21,9 @@ export default async function cmdSplit(args: SpiltArgs) {
 
   fs.mkdirSync(dist, { recursive: true });
 
-  // it doesn't matter what base this is, or what number it is; later runs 'prefer' files sorted earlier
-  const key = toBase62(+new Date() - startOfTime, 7);
-
   const parts = path.parse(sourcePath);
   const sourceName = relativize(parts.base);
-  const staticName = relativize(parts.name + `.kt-${key}.js`);
+  const staticName = relativize(buildCorpusName(parts.base));
 
   const existing = await loadExisting({
     from: args.oldPath || args.dist,
@@ -86,13 +82,3 @@ const toPercentChange = (v: number) => {
   const sign = v < 1.0 ? '' : '+';
   return sign + ((v - 1.0) * 100).toFixed(1) + '%';
 };
-
-function toBase62(v: number, pad: number = 0) {
-  const b62digit = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
-  let result = '';
-  while (v > 0) {
-    result = b62digit[v % b62digit.length] + result;
-    v = Math.floor(v / b62digit.length);
-  }
-  return result.padStart(pad, '0');
-}

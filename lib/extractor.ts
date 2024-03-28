@@ -1,11 +1,12 @@
 import * as acorn from 'acorn';
 import { analyzeFunction } from './analyze.ts';
-import { relativize, renderOnly, renderSkip, withDefault } from './helper.ts';
 import { ModDef } from './internal/moddef.ts';
 import { findVars, resolveConst } from './interpret.ts';
 import { AnalyzeBlock, VarInfo, analyzeBlock } from './internal/analyze/block.ts';
 import { AggregateImports, aggregateImports } from './internal/analyze/module.ts';
 import { createBlock, createExpressionStatement } from './internal/analyze/helper.ts';
+import { renderOnly, renderSkip } from './render.ts';
+import { relativize, withDefault } from './helper.ts';
 
 const normalStaticPrefix = '_';
 const callableStaticPrefix = '$';
@@ -15,7 +16,7 @@ export type ExtractStaticArgs = {
   p: acorn.Program;
   sourceName: string;
   staticName: string;
-  existingStaticSource: Map<string, string>;
+  existingStaticSource?: Map<string, string>;
   dedupCallables: boolean;
 };
 
@@ -111,7 +112,7 @@ export class StaticExtractor {
     };
 
     // analyze all provided existing statics, record used vars
-    this.existingByCode = extractExistingStaticCode(args.existingStaticSource);
+    this.existingByCode = extractExistingStaticCode(args.existingStaticSource ?? new Map());
     for (const info of this.existingByCode.values()) {
       this.staticVars.add(`${info.name}~${info.import}`);
     }
@@ -317,8 +318,11 @@ export class StaticExtractor {
     return this.addCodeToStatic({ node: e, analysis, var: true });
   }
 
-  build() {
+  // TODO: `pretty` doesn't really go everywhere yet
+  build(args?: { pretty: boolean }) {
     const s = this.args.source;
+
+    const newlineSuffix = args?.pretty ? '\n' : '';
 
     // render statics
     const outStatic = new Map<string, string>();
@@ -330,7 +334,9 @@ export class StaticExtractor {
       const code =
         info.mod.renderSource() +
         `export var ` +
-        [...info.exported.entries()].map(([name, code]) => `${name}=${code}`).join(',') +
+        [...info.exported.entries()]
+          .map(([name, code]) => `${name}=${code}`)
+          .join(',' + newlineSuffix) +
         ';';
 
       outStatic.set(targetStaticName, code);
