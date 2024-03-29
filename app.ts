@@ -44,6 +44,12 @@ cmd.register('split', {
       short: 'c',
       help: 'alternative path to historic corpus',
     },
+    name: {
+      type: 'string',
+      default: '',
+      short: 'n',
+      help: 'output basename (default to basename of source)',
+    }
   },
   positional: true,
   usageSuffix: '<source> <outdir/>',
@@ -59,6 +65,7 @@ cmd.register('split', {
       dist: res.positionals[1],
       oldPath: (res.values['corpus'] as string) || '',
       dedupCallables: Boolean(res.values['dedup-callables']),
+      basename: (res.values['name'] as string) || '',
     });
   },
 });

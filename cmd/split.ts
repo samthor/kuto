@@ -14,6 +14,7 @@ export type SpiltArgs = {
   oldPath: string;
   dist: string;
   dedupCallables: boolean;
+  basename: string;
 };
 
 export default async function cmdSplit(args: SpiltArgs) {
@@ -21,9 +22,9 @@ export default async function cmdSplit(args: SpiltArgs) {
 
   fs.mkdirSync(dist, { recursive: true });
 
-  const parts = path.parse(sourcePath);
-  const sourceName = relativize(parts.base);
-  const staticName = relativize(buildCorpusName(parts.base));
+  const name = path.parse(args.basename || sourcePath).name + '.js';
+  const sourceName = relativize(name);
+  const staticName = relativize(buildCorpusName(name));
 
   const existing = await loadExisting({
     from: args.oldPath || args.dist,
@@ -68,7 +69,7 @@ export default async function cmdSplit(args: SpiltArgs) {
   for (const name of disused) {
     try {
       fs.rmSync(path.join(dist, name));
-    } catch {}
+    } catch { }
   }
   fs.writeFileSync(path.join(dist, sourceName), out.main);
   for (const [name, code] of out.static) {

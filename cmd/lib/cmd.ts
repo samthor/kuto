@@ -79,4 +79,4 @@ export const run = (argv = process.argv.slice(2)): any => {
   process.exit(v['help'] ? 0 : 1);
 };
 
-export class CommandError extends Error {}
+export class CommandError extends Error { }
