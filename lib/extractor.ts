@@ -134,7 +134,7 @@ export class StaticExtractor {
       );
     }
 
-    // create fake name for hole
+    // create fake name for hole: this is inefficient (can't reuse default locally anyway)
     if (this.agg.exportDefaultHole) {
       this.exportDefaultName = this.varForMain();
       this.agg.mod.removeExportLocal('default');
@@ -250,8 +250,10 @@ export class StaticExtractor {
       if (!(decl.type === 'ClassDeclaration' || decl.type === 'FunctionDeclaration')) {
         throw new Error(`can't hoist decl without name`);
       }
+      // static had faux-name of 'default'; we can't define this locally, use the fake
+      const localName = decl.id.name === 'default' ? this.exportDefaultName! : decl.id.name;
       this.nodesToReplace.set(args.node, '');
-      this.agg.mod.addImport(targetStaticName, decl.id.name, name);
+      this.agg.mod.addImport(targetStaticName, localName, name);
     }
 
     // clone imports needed to run this code (order is maintained in main file)
@@ -352,11 +354,10 @@ export class StaticExtractor {
       }),
     ].flat();
 
-    if (this.agg.exportDefaultHole) {
+    // if this is `export default "foo";`, we need to reassign in case it was yeeted
+    if (this.agg.exportDefaultHole?.decl === false) {
       const h = this.agg.exportDefaultHole;
-
-      // by definition we can't reference ourselves, so this var is 'pointless'
-      skip.push({ ...h, replace: `const ${this.exportDefaultName}=` });
+      skip.push({ start: h.start, end: h.end, replace: `const ${this.exportDefaultName}=` });
       skip.push({ start: h.after, end: h.after, replace: ';' });
     }
 

@@ -6,7 +6,18 @@ export type AggregateImports = {
   mod: ModDef;
   localConst: Set<string>;
   rest: acorn.Statement[];
-  exportDefaultHole?: { start: number; end: number; after: number };
+
+  /**
+   * Set only if this is an unnamed default export, e.g. `export default function () { ... }` or `export default "foo";`.
+   *
+   * It is _not_ set if it's named `export default class Foo {}`.
+   */
+  exportDefaultHole?: {
+    start: number;
+    end: number;
+    after: number;
+    decl: boolean;
+  };
 };
 
 const fakeDefaultIdentifier: acorn.Identifier = Object.freeze({
@@ -173,7 +184,7 @@ export function aggregateImports(p: acorn.Program): AggregateImports {
             }
             out.mod.addExportLocal('default', 'default');
             out.localConst.add('default');
-            out.exportDefaultHole = { start: node.start, end: d.start, after: d.end };
+            out.exportDefaultHole = { start: node.start, end: d.start, after: d.end, decl: false };
             // don't use helper, it doesn't include start/end properly
             out.rest.push({
               type: 'ExpressionStatement',
@@ -194,7 +205,7 @@ export function aggregateImports(p: acorn.Program): AggregateImports {
           // can't reassign unnamed declaration
           out.mod.addExportLocal('default', 'default');
           out.localConst.add('default');
-          out.exportDefaultHole = { start: node.start, end: d.start, after: d.end };
+          out.exportDefaultHole = { start: node.start, end: d.start, after: d.end, decl: true };
         } else {
           throw new Error(`unnamed declaration`);
         }
