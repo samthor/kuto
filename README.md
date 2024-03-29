@@ -1,8 +1,10 @@
-<img src="https://storage.googleapis.com/hwhistlr.appspot.com/og/kuto.jpeg" width="200" height="105" alt="Kuto tool logo" />
-
 🌈 Kuto makes updating your site's JS better, faster, harder, stronger.
 It reduces your download size by re-using code you've already shipped.
 Read more [on the blog](https://samthor.au/2024/kuto/)! 🌈
+
+<img src="https://storage.googleapis.com/hwhistlr.appspot.com/og/kuto.jpeg" width="200" height="105" alt="Kuto tool logo" />
+
+[![Tests](https://github.com/samthor/kuto/actions/workflows/tests.yml/badge.svg)](https://github.com/samthor/kuto/actions/workflows/tests.yml)
 
 It does this by splitting JS files (in ESM) into 'main' and static parts.
 The static parts can be cached by clients forever, as they have no side-effects, and can be used as a 'corpus' or dictionary of code that can be called later.
@@ -72,6 +74,11 @@ By default, this looks in the output dir, but you can change it with a flag.
 
   (This may not actually be the best way to keep chunks around.
   This flag will probably evolve over time.)
+
+- `-n <name>` use this basename for the output (default: basename of input)
+
+  Normally, Kuto creates output files with the same name as the input files.
+  Instead, use this to output e.g., "index.js" regardless of source name.
 
 ## Best Practice
 
