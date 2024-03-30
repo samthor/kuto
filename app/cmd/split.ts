@@ -1,11 +1,11 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { StaticExtractor } from '../lib/extractor.ts';
-import { liftDefault } from '../lib/lift.ts';
-import { loadAndMaybeTransform } from './lib/load.ts';
-import { loadExisting } from './lib/load.ts';
-import { relativize } from '../lib/helper.ts';
-import { buildCorpusName } from '../lib/name.ts';
+import { StaticExtractor } from '../../lib/extractor.ts';
+import { liftDefault } from '../../lib/lift.ts';
+import { loadAndMaybeTransform } from '../lib/load.ts';
+import { loadExisting } from '../lib/load.ts';
+import { relativize } from '../../lib/helper.ts';
+import { buildCorpusName } from '../../lib/name.ts';
 
 export type SpiltArgs = {
   min: number;

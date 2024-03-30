@@ -13,7 +13,7 @@
   },
   "scripts": {
     "prepublishOnly": "bash release.sh",
-    "test": "npx tsx test.ts"
+    "test": "npx tsx test/index.ts"
   },
   "bin": {
     "kuto": "./dist/app.js"

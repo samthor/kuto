@@ -1,9 +1,9 @@
-import { aggregateImports } from '../lib/internal/analyze/module.ts';
-import { VarInfo, analyzeBlock } from '../lib/internal/analyze/block.ts';
-import { findVars, resolveConst } from '../lib/interpret.ts';
-import { createBlock } from '../lib/internal/analyze/helper.ts';
-import { loadAndMaybeTransform } from './lib/load.ts';
-import { relativize } from '../lib/helper.ts';
+import { aggregateImports } from '../../lib/internal/analyze/module.ts';
+import { VarInfo, analyzeBlock } from '../../lib/internal/analyze/block.ts';
+import { findVars, resolveConst } from '../../lib/interpret.ts';
+import { createBlock } from '../../lib/internal/analyze/helper.ts';
+import { loadAndMaybeTransform } from '../lib/load.ts';
+import { relativize } from '../../lib/helper.ts';
 
 export type InfoArgs = {
   path: string;

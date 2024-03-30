@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import * as cmd from './cmd/lib/cmd.ts';
+import * as cmd from './lib/cmd.ts';
 import cmdSplit from './cmd/split.ts';
 import cmdInfo from './cmd/info.ts';
 

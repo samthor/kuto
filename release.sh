@@ -12,7 +12,7 @@ esbuild \
     --platform=node \
     --external:esbuild \
     --target=${TARGET} \
-    app.ts
+    app/index.ts
 
 node ${OUTFILE} split ${OUTFILE} dist/split/
 
@@ -21,3 +21,6 @@ for X in dist/split/*; do
   BASE=$(basename $X)
   esbuild --format=esm --outfile=dist/$BASE --minify $X
 done
+
+# confirms the binary runs at all
+node dist/app.js info dist/app.js >/dev/null
