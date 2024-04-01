@@ -17,6 +17,8 @@ Think of it as doing code-splitting 'last', rather than first.
 
 Node 14+.
 
+Kuto works best on large (>1mb) singular JS bundles 'bundled' to ESM — the tool works on a statement level, and an IIFE/webpack output is one giant statement.
+
 ## Usage
 
 You can install via "kuto" and then run `npx kuto` to learn more.
@@ -52,15 +54,15 @@ By default, this looks in the output dir, but you can change it with a flag.
   For example:
 
   ```ts
-  class A {}
-  class B {}
+  var A = class {};
+  var B = class {};
 
   // will be 'true' in `-d` mode
   new A() instanceof B;
   ```
 
   This is turned off by default, as it can be dangerous.
-  Kuto will still dedup code where it is safe to do so!
+  Kuto will still dedup other code where it is safe to do so!
 
 - `-m <bytes>` only yeet code which is larger than this (default: `32`)
 
@@ -89,7 +91,7 @@ This release process runs in three steps:
 
 1. use esbuild to create one bundle (without minification)
 2. use kuto to split the bundle
-3. use esbuild on all resulting files purely to minify them
+3. use esbuild on all resulting files, _purely_ to minify
 
 ## Notes
 
