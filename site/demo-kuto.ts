@@ -8,6 +8,8 @@ export class DemoKutoElement extends HTMLElement {
   private textarea: HTMLTextAreaElement;
   private article: HTMLElement;
   private priors?: Map<string, string>;
+  private buildCount: number = 0;
+  private statusEl: HTMLElement;
 
   constructor() {
     super();
@@ -56,12 +58,17 @@ article > pre {
     font-family: monospace;
   }
 }
+
+#status {
+  color: red;
+}
 </style>
 
 <main>
   <header>
     <textarea></textarea>
     <button autofocus>Split with Kuto</button>
+    <div id="status"></div>
   </header>
   <article></article>
 </main>
@@ -78,6 +85,8 @@ article > pre {
       }
     });
     this.textarea = textarea;
+
+    this.statusEl = this.root.getElementById('status')!;
   }
 
   private async run(source: string) {
@@ -96,6 +105,9 @@ article > pre {
 
     const out = e.build({ pretty: true });
     console.info({ liftStats, out });
+
+    const localBuild = ++this.buildCount;
+    this.statusEl.textContent = `Build #${localBuild}`;
 
     this.article.textContent = '';
 
