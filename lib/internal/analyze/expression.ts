@@ -38,6 +38,26 @@ function createIife(body: acorn.Statement[]): acorn.CallExpression {
   };
 }
 
+export function patternsToDeclaration(...p: acorn.Pattern[]): acorn.VariableDeclaration {
+  const decl: acorn.VariableDeclaration = {
+    type: 'VariableDeclaration',
+    start: -1,
+    end: -1,
+    kind: 'var',
+    declarations: p.map((id): acorn.VariableDeclarator => {
+      return {
+        type: 'VariableDeclarator',
+        start: id.start,
+        end: id.end,
+        id,
+      };
+    }),
+  };
+  return decl;
+}
+
+export function namesFromDeclaration(d: acorn.VariableDeclaration) {}
+
 /**
  * Returns the given "class" as a number of simple component parts.
  * This can't be used or run but is the same from an analysis point of view.
@@ -84,7 +104,7 @@ function reductifyClassParts(c: acorn.Class): acorn.Expression {
   return e.length === 1 ? e[0] : createSequenceExpression(...e);
 }
 
-function reductifyFunction(f: acorn.Function): acorn.BlockStatement {
+export function reductifyFunction(f: acorn.Function): acorn.BlockStatement {
   const body: acorn.Statement[] = [];
 
   // our own function name becomes something we can reference
@@ -107,21 +127,7 @@ function reductifyFunction(f: acorn.Function): acorn.BlockStatement {
   }
 
   if (f.params.length) {
-    const decl: acorn.VariableDeclaration = {
-      type: 'VariableDeclaration',
-      start: -1,
-      end: -1,
-      kind: 'var',
-      declarations: f.params.map((id): acorn.VariableDeclarator => {
-        return {
-          type: 'VariableDeclarator',
-          start: id.start,
-          end: id.end,
-          id,
-        };
-      }),
-    };
-    body.push(decl);
+    body.push(patternsToDeclaration(...f.params));
   } else if (f.body.type === 'BlockStatement') {
     return f.body;
   }

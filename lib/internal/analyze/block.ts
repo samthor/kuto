@@ -189,7 +189,7 @@ export type AnalyzeBlock = {
   hasNested: boolean;
 };
 
-export function analyzeBlock(b: acorn.BlockStatement): AnalyzeBlock {
+export function analyzeBlock(b: acorn.BlockStatement, args?: { nest?: boolean }): AnalyzeBlock {
   const out: AnalyzeBlock = { vars: new Map(), hasNested: false };
   const mark: MarkIdentifierFn = (name, { nested, writes }) => {
     if (name === '') {
@@ -220,6 +220,10 @@ export function analyzeBlock(b: acorn.BlockStatement): AnalyzeBlock {
     const simple = reductifyStatement(raw) ?? { type: 'EmptyStatement' };
     switch (simple.type) {
       case 'BlockStatement': {
+        if (args?.nest === false) {
+          break; // we can skip descending in some cases
+        }
+
         const inner = analyzeBlock(simple);
 
         for (const [key, info] of inner.vars) {

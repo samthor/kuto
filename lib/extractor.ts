@@ -315,8 +315,18 @@ export class StaticExtractor {
     return this.addCodeToStatic({ node: c, analysis });
   }
 
-  liftExpression(e: acorn.Expression) {
+  /**
+   * Lifts the given expression.
+   * If any of the variables used in `dirty` are used (r/rw), skip.
+   */
+  liftExpression(e: acorn.Expression, dirty: string[] = []) {
     const analysis = analyzeBlock(createBlock(createExpressionStatement(e)));
+    for (const d of dirty) {
+      if (analysis.vars.has(d)) {
+        return null;
+      }
+    }
+
     return this.addCodeToStatic({ node: e, analysis, var: true });
   }
 
