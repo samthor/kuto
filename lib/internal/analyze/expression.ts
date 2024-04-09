@@ -182,6 +182,12 @@ export function processExpression(
       break;
     }
 
+    case 'ImportExpression':
+      // we basically use the global 'import', even though this is a keyword
+      mark('import', { nested: false, writes: 0 });
+      processExpression(e.source, mark);
+      break;
+
     case 'NewExpression':
     case 'CallExpression':
       e.arguments.forEach((arg) => processExpression(arg, mark));
@@ -266,10 +272,6 @@ export function processExpression(
       }
       break;
     }
-
-    case 'ImportExpression':
-      processExpression(e.source, mark);
-      break;
 
     default:
       throw new Error(`should not get here: ${(e as any).type}`);
