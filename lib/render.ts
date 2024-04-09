@@ -19,6 +19,11 @@ export function renderSkip(
 export function renderOnly(raw: string, include: { start: number; end: number }[]) {
   include = [...include].sort(({ start: a }, { start: b }) => a - b);
 
+  // we don't think there's a "final" statement to include a semicolon before; hack it in
+  if (include.length) {
+    include.push({ start: raw.length, end: raw.length + 1 });
+  }
+
   const holes: { start: number; end: number }[] = [];
 
   let lastPart = '';
