@@ -7,7 +7,10 @@ import {
   processPattern,
 } from './helper.ts';
 
-export type MarkIdentifierFn = (name: string, arg: { nested: boolean; writes: number }) => void;
+export type MarkIdentifierFn = (
+  name: string,
+  arg: { nested: boolean; writes: number } | { special: { await?: boolean; nested?: boolean } },
+) => void;
 
 /**
  * Returns the following statements inside an immediately-invoked function expression.
@@ -153,9 +156,13 @@ export function processExpression(
       processExpression(e.expression, mark);
       break;
 
+    case 'AwaitExpression':
+      mark('', { special: { await: true } });
+      processExpression(e.argument, mark);
+      break;
+
     case 'SpreadElement':
     case 'YieldExpression':
-    case 'AwaitExpression':
     case 'UnaryExpression':
       e.argument && processExpression(e.argument, mark);
       break;
@@ -231,13 +238,13 @@ export function processExpression(
       break;
 
     case 'ClassExpression':
-      mark('', { nested: true, writes: 0 });
+      mark('', { special: { nested: true } });
       processExpression(reductifyClassParts(e), mark);
       break;
 
     case 'FunctionExpression':
     case 'ArrowFunctionExpression': {
-      mark('', { nested: true, writes: 0 });
+      mark('', { special: { nested: true } });
 
       const block = reductifyFunction(e);
       const inner = analyzeBlock(block);

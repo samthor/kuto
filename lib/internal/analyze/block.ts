@@ -187,19 +187,29 @@ export type VarInfo = {
 export type AnalyzeBlock = {
   vars: Map<string, VarInfo>;
   hasNested: boolean;
+  hasAwait: boolean;
 };
 
 export function analyzeBlock(b: acorn.BlockStatement, args?: { nest?: boolean }): AnalyzeBlock {
-  const out: AnalyzeBlock = { vars: new Map(), hasNested: false };
-  const mark: MarkIdentifierFn = (name, { nested, writes }) => {
-    if (name === '') {
+  const out: AnalyzeBlock = { vars: new Map(), hasNested: false, hasAwait: false };
+  const mark: MarkIdentifierFn = (name, arg) => {
+    if ('special' in arg) {
       // this is a short-circuit to mark hasNested
-      if (!nested || writes) {
-        throw new Error(`mark was called with empty var for nested=false || writes`);
+      if (name) {
+        throw new Error(`mark special called wrong`);
       }
-      out.hasNested = true;
+      if (arg.special.nested) {
+        out.hasNested = true;
+      }
+      if (arg.special.await) {
+        out.hasAwait = true;
+      }
       return;
     }
+    if (!name) {
+      throw new Error(`should be called with special`);
+    }
+    const { nested, writes } = arg;
 
     const info = out.vars.get(name);
     if (info === undefined) {

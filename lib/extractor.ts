@@ -235,6 +235,9 @@ export class StaticExtractor {
       // we don't know what's here so need ()'s (could be "foo,bar")
       // acorn 'eats' the extra () before it returns, so nothing is needed on the other side
       code = `_=>(${code})`;
+      if (args.analysis.hasAwait) {
+        code = `async ${code}`;
+      }
     }
     targetStatic.exported.set(name, code);
 
@@ -243,6 +246,12 @@ export class StaticExtractor {
       // TODO: referencing a global import isn't nessecarily smaller
       let replacedCode =
         `${targetStatic.globalInMain}.${name}` + (find.immediateAccess ? '()' : '');
+      if (args.analysis.hasAwait) {
+        // this can generate TLA in the static bundle - seems fine?
+        // like this is a bad expr, nothing sensible can be awaited if we're here
+        replacedCode = `await ${replacedCode}`;
+      }
+
       this.nodesToReplace.set(args.node, replacedCode);
       this.agg.mod.addGlobalImport(targetStaticName, targetStatic.globalInMain);
     } else {
