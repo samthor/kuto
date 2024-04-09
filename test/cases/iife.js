@@ -1,3 +1,6 @@
+function something_long_call() {}
+const foo = { bar() {} };
+
 (function (q) {
   console.info('Kuto should extract this long statement', q);
   something_long_call(123, 'hello there long');
