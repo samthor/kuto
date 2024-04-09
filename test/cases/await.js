@@ -22,3 +22,8 @@ const complexAwaited = () => {
 
 const y = await (1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 + 9 + 10 + complexAwaited());
 console.info(y);
+
+const asyncInlineMethod = async (x = 123) => {
+  console.info('long fn expr');
+  await 123; // force await check
+};
