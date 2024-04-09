@@ -273,6 +273,8 @@ export class StaticExtractor {
       // ..but we need A in the bundle, we need to rename it for the 'journey'; this seems rare for
       // hand-crafted code, but very possible with bundlers
 
+      let skipExport = false;
+
       // TODO: this code could use a tidy up
       let nameForTransport = mainLocal;
       const prev = this.agg.mod.getExport(nameForTransport);
@@ -284,10 +286,13 @@ export class StaticExtractor {
         nameForTransport = this.varForMain();
         this.mainLocalExportAs.set(mainLocal, nameForTransport);
       } else if (prev) {
-        continue; // nothing to do, already exported
+        // we're already exported from the main file; just re-use that
+        skipExport = true;
       }
 
-      this.agg.mod.addExportLocal(nameForTransport, mainLocal);
+      if (!skipExport) {
+        this.agg.mod.addExportLocal(nameForTransport, mainLocal);
+      }
       targetStatic.mod.addImport(this.args.sourceName, mainLocal, nameForTransport);
     }
     return {};
