@@ -60,7 +60,7 @@ if (total === 0) {
   console.warn('no tests matched');
   process.exit(2); // no test run
 }
-console.info(success.length + '/' + total, 'passed');
+console.info(success.length + '/' + total, 'passed', { errors });
 if (errors.length) {
   process.exit(1);
 }
