@@ -1,6 +1,6 @@
 🌈 Kuto makes updating your site's JS better, faster, harder, stronger.
 It reduces your download size by re-using code you've already shipped.
-Read more [on the blog](https://samthor.au/2024/kuto/)! 🌈
+Read more [on the blog](https://samthor.au/2024/kuto/), or watch [Theo.gg's video](https://www.youtube.com/watch?v=_sxwQBWJQHA)! 🌈
 
 <img src="https://storage.googleapis.com/hwhistlr.appspot.com/og/kuto.jpeg" width="200" height="105" alt="Kuto tool logo" />
 
