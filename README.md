@@ -15,7 +15,7 @@ Think of it as doing code-splitting 'last', rather than first.
 
 ## Requirements
 
-Node 14+.
+Node 16+.
 
 Kuto works best on large (>1mb) singular JS bundles 'bundled' to ESM — the tool works on a statement level, and an IIFE/webpack output is one giant statement.
 

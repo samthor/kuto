@@ -71,8 +71,18 @@ export default async function cmdInfo(args: InfoArgs) {
     console.info(`- ${g}${rw ? ' (written)' : ''}`);
   }
 
+  console.info('\nImports used at top-level:');
+  for (const g of toplevelFind.imports.keys()) {
+    console.info(`- ${g}`);
+  }
+
   console.info('\nGlobals used in callables:');
   for (const [g, rw] of nestedFind.globals) {
     console.info(`- ${g}${rw ? ' (written)' : ''}`);
+  }
+
+  console.info('\nImports used in callables:');
+  for (const g of nestedFind.imports.keys()) {
+    console.info(`- ${g}`);
   }
 }

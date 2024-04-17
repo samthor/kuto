@@ -1,18 +1,17 @@
 #!/usr/bin/env node
 
 import * as cmd from './lib/cmd.ts';
-import cmdSplit from './cmd/split.ts';
-import cmdInfo from './cmd/info.ts';
 
 cmd.register('info', {
   description: 'Show information about a JS module file',
   positional: true,
   usageSuffix: '<path>',
-  handler(res) {
+  async handler(res) {
     if (res.positionals.length !== 1) {
       throw new cmd.CommandError();
     }
 
+    const { default: cmdInfo } = await import('./cmd/info.ts');
     return cmdInfo({ path: res.positionals[0] });
   },
 });
@@ -49,15 +48,16 @@ cmd.register('split', {
       default: '',
       short: 'n',
       help: 'output basename (default to basename of source)',
-    }
+    },
   },
   positional: true,
   usageSuffix: '<source> <outdir/>',
-  handler(res) {
+  async handler(res) {
     if (res.positionals.length !== 2) {
       throw new cmd.CommandError();
     }
 
+    const { default: cmdSplit } = await import('./cmd/split.ts');
     return cmdSplit({
       min: +(res.values['min'] ?? 0),
       keep: +(res.values['keep'] ?? 0),
@@ -70,8 +70,4 @@ cmd.register('split', {
   },
 });
 
-// TODO: until we rev from node14
-const p = Promise.resolve(cmd.run());
-p.catch((e) => {
-  throw e;
-});
+await cmd.run();
