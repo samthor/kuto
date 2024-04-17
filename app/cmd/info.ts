@@ -14,8 +14,10 @@ export default async function cmdInfo(args: InfoArgs) {
 
   const agg = aggregateImports(p);
   const block = createBlock(...agg.rest);
-  const analysis = analyzeBlock(block);
+  const analysis = analyzeBlock(block, { nest: true });
   resolveConst(agg, analysis);
+
+  console.info('analysis:', analysis.vars);
 
   const toplevelVars = new Map<string, VarInfo>();
   const nestedVars = new Map<string, VarInfo>();
@@ -59,6 +61,8 @@ export default async function cmdInfo(args: InfoArgs) {
       suffix = ` from ${JSON.stringify(e.import)} (re-export)`;
     } else if (!agg.localConst.has(e.name)) {
       suffix = ` (mutable, may change)`;
+    } else {
+      suffix = ` (const)`;
     }
     console.info(`- ${left}${suffix}`);
   }

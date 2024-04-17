@@ -264,7 +264,7 @@ export function analyzeBlock(b: acorn.BlockStatement, args?: { nest?: boolean })
 
           if (info.nested) {
             prev.nested ??= { writes: 0 };
-            prev.nested.writes += prev.nested.writes;
+            prev.nested.writes += info.nested.writes;
           }
         }
         break;
