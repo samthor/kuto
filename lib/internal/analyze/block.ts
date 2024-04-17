@@ -190,6 +190,11 @@ export type AnalyzeBlock = {
   hasAwait: boolean;
 };
 
+/**
+ * Analyze a block for its variable interactions.
+ *
+ * The `nest` argument is default `true`.
+ */
 export function analyzeBlock(b: acorn.BlockStatement, args?: { nest?: boolean }): AnalyzeBlock {
   const out: AnalyzeBlock = { vars: new Map(), hasNested: false, hasAwait: false };
   const mark: MarkIdentifierFn = (name, arg) => {

@@ -14,7 +14,7 @@ export default async function cmdInfo(args: InfoArgs) {
 
   const agg = aggregateImports(p);
   const block = createBlock(...agg.rest);
-  const analysis = analyzeBlock(block, { nest: true });
+  const analysis = analyzeBlock(block);
   resolveConst(agg, analysis);
 
   console.info('analysis:', analysis.vars);
