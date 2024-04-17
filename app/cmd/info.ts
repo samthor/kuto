@@ -17,8 +17,6 @@ export default async function cmdInfo(args: InfoArgs) {
   const analysis = analyzeBlock(block);
   resolveConst(agg, analysis);
 
-  console.info('analysis:', analysis.vars);
-
   const toplevelVars = new Map<string, VarInfo>();
   const nestedVars = new Map<string, VarInfo>();
   for (const [cand, info] of analysis.vars) {
@@ -30,8 +28,9 @@ export default async function cmdInfo(args: InfoArgs) {
 
   console.info('#', JSON.stringify(relativize(args.path)));
 
-  const sideEffects = toplevelFind.immediateAccess;
-  console.info('\nSide-effects:', sideEffects ? 'Unknown' : 'No!');
+  // TODO: not useful right now
+  // const sideEffects = toplevelFind.immediateAccess;
+  // console.info('\nSide-effects:', sideEffects ? 'Unknown' : 'No!');
 
   console.info('\nImports:');
   for (const { name, info } of agg.mod.importSources()) {
@@ -62,7 +61,7 @@ export default async function cmdInfo(args: InfoArgs) {
     } else if (!agg.localConst.has(e.name)) {
       suffix = ` (mutable, may change)`;
     } else {
-      suffix = ` (const)`;
+      suffix = ` (immutable)`;
     }
     console.info(`- ${left}${suffix}`);
   }
