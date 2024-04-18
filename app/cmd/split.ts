@@ -2,7 +2,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { StaticExtractor } from '../../lib/extractor.ts';
 import { liftDefault } from '../../lib/lift.ts';
-import { loadAndMaybeTransform } from '../lib/load.ts';
+import { loadAndMaybeTransform, parse } from '../lib/load.ts';
 import { loadExisting } from '../lib/load.ts';
 import { relativize } from '../../lib/helper.ts';
 import { buildCorpusName } from '../../lib/name.ts';
@@ -31,10 +31,11 @@ export default async function cmdSplit(args: SpiltArgs) {
     keep: args.keep,
   });
 
-  const { p, source } = await loadAndMaybeTransform(args.sourcePath);
+  const { source } = await loadAndMaybeTransform(args.sourcePath);
+  const prog = parse(source);
 
   const e = new StaticExtractor({
-    p,
+    p: prog,
     source,
     sourceName,
     staticName,
@@ -69,7 +70,7 @@ export default async function cmdSplit(args: SpiltArgs) {
   for (const name of disused) {
     try {
       fs.rmSync(path.join(dist, name));
-    } catch { }
+    } catch {}
   }
   fs.writeFileSync(path.join(dist, sourceName), out.main);
   for (const [name, code] of out.static) {

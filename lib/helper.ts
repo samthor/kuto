@@ -17,3 +17,10 @@ export function relativize(s: string) {
   } catch (e) {}
   return './' + s;
 }
+
+export function isLocalImport(s: string) {
+  if (/^\.{0,2}\//.test(s)) {
+    return true;
+  }
+  return false;
+}

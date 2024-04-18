@@ -2,7 +2,7 @@ import { aggregateImports } from '../../lib/internal/analyze/module.ts';
 import { VarInfo, analyzeBlock } from '../../lib/internal/analyze/block.ts';
 import { findVars, resolveConst } from '../../lib/interpret.ts';
 import { createBlock } from '../../lib/internal/analyze/helper.ts';
-import { loadAndMaybeTransform } from '../lib/load.ts';
+import { loadAndMaybeTransform, parse } from '../lib/load.ts';
 import { relativize } from '../../lib/helper.ts';
 
 export type InfoArgs = {
@@ -10,7 +10,8 @@ export type InfoArgs = {
 };
 
 export default async function cmdInfo(args: InfoArgs) {
-  const { p } = await loadAndMaybeTransform(args.path);
+  const { source } = await loadAndMaybeTransform(args.path);
+  const p = parse(source);
 
   const agg = aggregateImports(p);
   const block = createBlock(...agg.rest);

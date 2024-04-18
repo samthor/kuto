@@ -4,8 +4,17 @@ import { buildJoin, urlAgnosticRelativeBasename } from '../lib/helper.ts';
 import { aggregateImports } from '../../lib/internal/analyze/module.ts';
 import * as acorn from 'acorn';
 
-export function parse(source: string) {
-  return acorn.parse(source, { ecmaVersion: 'latest', sourceType: 'module' });
+export function parse(source: string, comment?: (text: string) => void) {
+  const args: acorn.Options = {
+    ecmaVersion: 'latest',
+    sourceType: 'module',
+  };
+  if (comment) {
+    args.onComment = (isBlock, text) => {
+      comment(text);
+    };
+  }
+  return acorn.parse(source, args);
 }
 
 function hasCorpusSuffix(s: string) {
@@ -90,7 +99,13 @@ export async function loadExisting(args: LoadExistingArgs) {
 
 const needsBuildExt = (ext: string) => ['.ts', '.tsx', '.jsx'].includes(ext);
 
-export async function loadAndMaybeTransform(name: string) {
+export type LoadResult = {
+  name: string;
+  source: string;
+  stat: fs.Stats;
+};
+
+export async function loadAndMaybeTransform(name: string): Promise<LoadResult> {
   const { ext } = path.parse(name);
   let source = fs.readFileSync(name, 'utf-8');
   const stat = fs.statSync(name);
@@ -102,10 +117,10 @@ export async function loadAndMaybeTransform(name: string) {
       loader: ext.endsWith('x') ? 'tsx' : 'ts',
       format: 'esm',
       platform: 'neutral',
+      legalComments: 'inline',
     });
     source = t.code;
   }
 
-  const p = parse(source);
-  return { p, name, source, stat };
+  return { name, source, stat };
 }

@@ -14,6 +14,9 @@ devDependencies:
   esbuild:
     specifier: ^0.20.2
     version: 0.20.2
+  esm-resolve:
+    specifier: ^1.0.11
+    version: 1.0.11
   tsx:
     specifier: ^4.7.1
     version: 4.7.1
@@ -708,6 +711,10 @@ packages:
       '@esbuild/win32-arm64': 0.20.2
       '@esbuild/win32-ia32': 0.20.2
       '@esbuild/win32-x64': 0.20.2
+    dev: true
+
+  /esm-resolve@1.0.11:
+    resolution: {integrity: sha512-LxF0wfUQm3ldUDHkkV2MIbvvY0TgzIpJ420jHSV1Dm+IlplBEWiJTKWM61GtxUfvjV6iD4OtTYFGAGM2uuIUWg==}
     dev: true
 
   /event-stream@3.3.4:

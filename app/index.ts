@@ -16,6 +16,20 @@ cmd.register('info', {
   },
 });
 
+cmd.register('graph', {
+  description: 'Validate a module graph based on conditions',
+  positional: true,
+  usageSuffix: '<entrypoint> <entrypoints...>',
+  async handler(res) {
+    if (res.positionals.length < 1) {
+      throw new cmd.CommandError();
+    }
+
+    const { default: cmdGraph } = await import('./cmd/graph.ts');
+    return cmdGraph({ paths: res.positionals });
+  },
+});
+
 cmd.register('split', {
   description: 'Split a JS module into runtime and static code',
   flags: {

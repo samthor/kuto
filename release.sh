@@ -2,7 +2,7 @@
 
 set -eu
 
-TARGET=node14
+TARGET=node16
 OUTFILE=dist/raw/app.js
 
 esbuild \
